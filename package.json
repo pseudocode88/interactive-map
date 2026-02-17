@@ -1,0 +1,8 @@
+{
+  "name": "interactive-map-workspace",
+  "private": true,
+  "packageManager": "pnpm@9.15.4",
+  "scripts": {
+    "dev": "pnpm --filter demo dev"
+  }
+}
