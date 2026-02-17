@@ -31,7 +31,7 @@ export function InteractiveMap({
     !baseLayer ||
     !baseSize ||
     !containerSize ||
-    containerSize.height === 0
+    containerSize.width === 0
   ) {
     return (
       <div ref={containerRef} style={{ width, height }} className={className} />
@@ -43,8 +43,8 @@ export function InteractiveMap({
     easingFactor: panConfig?.easingFactor ?? 0.15,
   };
 
-  const halfHeight = baseSize.height / 2;
-  const halfWidth = halfHeight * (containerSize.width / containerSize.height);
+  const halfWidth = baseSize.width / 2;
+  const halfHeight = halfWidth * (containerSize.height / containerSize.width);
 
   return (
     <div

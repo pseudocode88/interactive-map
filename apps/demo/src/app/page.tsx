@@ -6,7 +6,7 @@ const layers = [
     id: "overlay",
     src: "/overlay.png",
     zIndex: 1,
-    position: { x: 100, y: -50 },
+    position: { x: 0, y: -50 },
   },
 ];
 
