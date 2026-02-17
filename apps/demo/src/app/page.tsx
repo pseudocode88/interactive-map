@@ -8,7 +8,10 @@ const layers = [
 export default function Home() {
   return (
     <main style={{ width: "100vw", height: "100vh" }}>
-      <InteractiveMap layers={layers} />
+      <InteractiveMap
+        layers={layers}
+        panConfig={{ enabled: true, easingFactor: 0.15 }}
+      />
     </main>
   );
 }

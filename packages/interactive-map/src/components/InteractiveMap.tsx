@@ -3,7 +3,7 @@
 import { Canvas } from "@react-three/fiber";
 import { Suspense, useMemo } from "react";
 
-import type { InteractiveMapProps } from "../types";
+import type { InteractiveMapProps, PanConfig } from "../types";
 import { useBaseImageSize } from "../hooks/useBaseImageSize";
 import { MapScene } from "./MapScene";
 
@@ -12,6 +12,7 @@ export function InteractiveMap({
   width = "100%",
   height = "100%",
   className,
+  panConfig,
 }: InteractiveMapProps) {
   const baseLayer = useMemo(() => {
     if (layers.length === 0) {
@@ -27,11 +28,24 @@ export function InteractiveMap({
     return <div style={{ width, height }} className={className} />;
   }
 
+  const resolvedPanConfig: Required<PanConfig> = {
+    enabled: panConfig?.enabled ?? true,
+    easingFactor: panConfig?.easingFactor ?? 0.15,
+  };
+
   const halfWidth = baseSize.width / 2;
   const halfHeight = baseSize.height / 2;
 
   return (
-    <div style={{ width, height }} className={className}>
+    <div
+      style={{
+        width,
+        height,
+        cursor: resolvedPanConfig.enabled ? "grab" : "default",
+        touchAction: "none",
+      }}
+      className={className}
+    >
       <Canvas
         orthographic
         camera={{
@@ -51,6 +65,7 @@ export function InteractiveMap({
             layers={layers}
             baseWidth={baseSize.width}
             baseHeight={baseSize.height}
+            panConfig={resolvedPanConfig}
           />
         </Suspense>
       </Canvas>
