@@ -2,7 +2,7 @@
 Name: Chunk 2 - Core Rendering Engine
 Type: Feature
 Created On: 2026-02-18
-Modified On: 2026-02-18
+Modified On: 2026-02-18 (Review Fixes)
 ---
 
 # Brief
@@ -280,5 +280,113 @@ export default function Home() {
 - [ ] Demo app renders at least 2 stacked layers with no console errors
 - [ ] TypeScript compiles with no errors (`tsc --noEmit`)
 
+# Review Fixes
+
+The following bugs were found during code review. Fix all of them on the existing `feature/core-rendering-engine` branch.
+
+## Fix 1: Texture filter mutation on every render
+
+**File:** `packages/interactive-map/src/components/MapLayerMesh.tsx`
+
+Setting `texture.minFilter` and `texture.magFilter` directly in the render body mutates the texture object on every render. Wrap it in a `useMemo` so it runs only when the texture changes.
+
+**Change:** Replace the direct filter assignments with:
+
+```tsx
+import { useMemo } from "react";
+
+// Inside the component, replace:
+//   texture.minFilter = LinearFilter;
+//   texture.magFilter = LinearFilter;
+// With:
+const processedTexture = useMemo(() => {
+  texture.minFilter = LinearFilter;
+  texture.magFilter = LinearFilter;
+  texture.needsUpdate = true;
+  return texture;
+}, [texture]);
+```
+
+Then use `processedTexture` in the material instead of `texture`:
+```tsx
+<meshBasicMaterial map={processedTexture} transparent />
+```
+
+## Fix 2: Missing cleanup in `useBaseImageSize`
+
+**File:** `packages/interactive-map/src/hooks/useBaseImageSize.ts`
+
+If the component unmounts while the image is still loading, the `onload` callback will call `setSize` on an unmounted component. Add a cancellation flag in the cleanup function.
+
+**Change:** Replace the `useEffect` body with:
+
+```ts
+useEffect(() => {
+  if (!src) {
+    setSize(null);
+    return;
+  }
+
+  let cancelled = false;
+  const image = new Image();
+  image.onload = () => {
+    if (!cancelled) {
+      setSize({ width: image.naturalWidth, height: image.naturalHeight });
+    }
+  };
+  image.src = src;
+
+  return () => {
+    cancelled = true;
+  };
+}, [src]);
+```
+
+## Fix 3: Demo app not updated with test layers
+
+**File:** `apps/demo/src/app/page.tsx`
+
+The demo still passes `layers={[]}`. Update it with actual test layers as specified in Step 8 of the original plan:
+
+1. Generate 2 test PNG images programmatically and place them in `apps/demo/public/`:
+   - `base-map.png` — a solid colored rectangle (e.g. 1920x1080, any color) to act as the base layer
+   - `overlay.png` — a transparent PNG with a simple shape or border to verify transparency and stacking
+   > If generating images is not feasible, create simple placeholder PNGs using a canvas script or download any free sample images.
+
+2. Update `apps/demo/src/app/page.tsx`:
+```tsx
+import { InteractiveMap } from "@interactive-map/core";
+
+const layers = [
+  { id: "base", src: "/base-map.png", zIndex: 0 },
+  { id: "overlay", src: "/overlay.png", zIndex: 1 },
+];
+
+export default function Home() {
+  return (
+    <main style={{ width: "100vw", height: "100vh" }}>
+      <InteractiveMap layers={layers} />
+    </main>
+  );
+}
+```
+
+## Fix 4 (Minor): Add error handling to `useBaseImageSize`
+
+**File:** `packages/interactive-map/src/hooks/useBaseImageSize.ts`
+
+Add an `onerror` handler so failed image loads don't silently hang. Add a `console.warn` in the error handler:
+
+```ts
+image.onerror = () => {
+  if (!cancelled) {
+    console.warn(`[InteractiveMap] Failed to load base image: ${src}`);
+  }
+};
+```
+
+Add this right after the `image.onload` assignment.
+
 # Log
 - **2026-02-18**: Plan created for Chunk 2 — Core Rendering Engine covering texture loading, orthographic camera, layer stacking, responsive container, and demo verification.
+- **2026-02-18**: Review fixes added — texture filter memoization, useEffect cleanup, demo layer data, and image load error handling.

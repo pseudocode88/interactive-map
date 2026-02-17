@@ -27,3 +27,4 @@
 - If the review is good and no issues, 
   1. move the plan file to `/docs/plans/done`
   2. merge the branch to main.
+  3. make sure all files are commited before merging, if not commited, commit it
