@@ -56,6 +56,7 @@ export function CameraController({
   panConfig,
 }: CameraControllerProps) {
   const { camera, size } = useThree();
+  const orthoCamera = camera as OrthographicCamera;
   const targetPosition = useRef<Point>({ x: 0, y: 0 });
   const dragState = useRef({
     isDragging: false,
@@ -86,7 +87,6 @@ export function CameraController({
     const screenDx = currentScreenX - dragState.current.previousScreenPoint.x;
     const screenDy = currentScreenY - dragState.current.previousScreenPoint.y;
 
-    const orthoCamera = camera as OrthographicCamera;
     const frustumWidth = orthoCamera.right - orthoCamera.left;
     const frustumHeight = orthoCamera.top - orthoCamera.bottom;
 
@@ -125,6 +125,9 @@ export function CameraController({
     camera.position.y += dy * panConfig.easingFactor;
   });
 
+  const interactionWidth = orthoCamera.right - orthoCamera.left;
+  const interactionHeight = orthoCamera.top - orthoCamera.bottom;
+
   return (
     <mesh
       position={[0, 0, 5]}
@@ -133,7 +136,7 @@ export function CameraController({
       onPointerUp={handlePointerUp}
       onPointerLeave={handlePointerUp}
     >
-      <planeGeometry args={[baseWidth, baseHeight]} />
+      <planeGeometry args={[interactionWidth, interactionHeight]} />
       <meshBasicMaterial visible={false} />
     </mesh>
   );

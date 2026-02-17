@@ -29,8 +29,7 @@ export function MapScene({
           key={layer.id}
           src={layer.src}
           zIndex={layer.zIndex}
-          baseWidth={baseWidth}
-          baseHeight={baseHeight}
+          position={layer.position}
         />
       ))}
     </>

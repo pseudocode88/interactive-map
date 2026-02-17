@@ -2,6 +2,10 @@ export interface MapLayer {
   id: string;
   src: string;
   zIndex: number;
+  position?: {
+    x?: number;
+    y?: number;
+  };
 }
 
 export interface PanConfig {

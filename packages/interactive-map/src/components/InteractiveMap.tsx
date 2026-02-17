@@ -1,10 +1,11 @@
 "use client";
 
 import { Canvas } from "@react-three/fiber";
-import { Suspense, useMemo } from "react";
+import { Suspense, useMemo, useRef } from "react";
 
 import type { InteractiveMapProps, PanConfig } from "../types";
 import { useBaseImageSize } from "../hooks/useBaseImageSize";
+import { useContainerSize } from "../hooks/useContainerSize";
 import { MapScene } from "./MapScene";
 
 export function InteractiveMap({
@@ -14,6 +15,7 @@ export function InteractiveMap({
   className,
   panConfig,
 }: InteractiveMapProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
   const baseLayer = useMemo(() => {
     if (layers.length === 0) {
       return null;
@@ -23,9 +25,17 @@ export function InteractiveMap({
   }, [layers]);
 
   const baseSize = useBaseImageSize(baseLayer?.src ?? "");
+  const containerSize = useContainerSize(containerRef);
 
-  if (!baseLayer || !baseSize) {
-    return <div style={{ width, height }} className={className} />;
+  if (
+    !baseLayer ||
+    !baseSize ||
+    !containerSize ||
+    containerSize.height === 0
+  ) {
+    return (
+      <div ref={containerRef} style={{ width, height }} className={className} />
+    );
   }
 
   const resolvedPanConfig: Required<PanConfig> = {
@@ -33,11 +43,12 @@ export function InteractiveMap({
     easingFactor: panConfig?.easingFactor ?? 0.15,
   };
 
-  const halfWidth = baseSize.width / 2;
   const halfHeight = baseSize.height / 2;
+  const halfWidth = halfHeight * (containerSize.width / containerSize.height);
 
   return (
     <div
+      ref={containerRef}
       style={{
         width,
         height,

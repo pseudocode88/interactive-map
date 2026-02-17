@@ -5,16 +5,13 @@ import { LinearFilter, TextureLoader } from "three";
 interface MapLayerMeshProps {
   src: string;
   zIndex: number;
-  baseWidth: number;
-  baseHeight: number;
+  position?: {
+    x?: number;
+    y?: number;
+  };
 }
 
-export function MapLayerMesh({
-  src,
-  zIndex,
-  baseWidth,
-  baseHeight,
-}: MapLayerMeshProps) {
+export function MapLayerMesh({ src, zIndex, position }: MapLayerMeshProps) {
   const texture = useLoader(TextureLoader, src);
 
   const processedTexture = useMemo(() => {
@@ -25,9 +22,12 @@ export function MapLayerMesh({
     return texture;
   }, [texture]);
 
+  const textureWidth = texture.image.width;
+  const textureHeight = texture.image.height;
+
   return (
-    <mesh position={[0, 0, zIndex * 0.01]}>
-      <planeGeometry args={[baseWidth, baseHeight]} />
+    <mesh position={[position?.x ?? 0, position?.y ?? 0, zIndex * 0.01]}>
+      <planeGeometry args={[textureWidth, textureHeight]} />
       <meshBasicMaterial map={processedTexture} transparent />
     </mesh>
   );
