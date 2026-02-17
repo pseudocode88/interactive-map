@@ -24,7 +24,9 @@
 - Don't modify the `AGENTS.md` file.
 
 ## Review
-- If the review is good and no issues, 
+- If the review is good and no issues
   1. move the plan file to `/docs/plans/done`
   2. merge the branch to main.
-  3. make sure all files are commited before merging, if not commited, commit it
+  3. make sure all files are commited before merging
+     1. if files are not commited, commit it first and then merge the branch
+     2. after merging delete the branch
