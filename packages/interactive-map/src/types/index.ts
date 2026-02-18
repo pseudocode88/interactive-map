@@ -156,6 +156,53 @@ export interface SpriteEffectConfig {
   opacity?: number;
 }
 
+export interface FogOpacityPulse {
+  /** Minimum opacity during the pulse cycle. Default: 0.3 */
+  minOpacity?: number;
+  /** Maximum opacity during the pulse cycle. Default: 0.8 */
+  maxOpacity?: number;
+  /** Duration of one full pulse cycle (min → max → min) in seconds. Default: 4 */
+  duration?: number;
+  /** Easing function for the opacity pulse. Default: 'ease-in-out' */
+  easing?: EasingConfig;
+}
+
+export interface FogScaleBreathing {
+  /** Maximum additional scale factor above 1.0. Default: 0.1 */
+  amplitude?: number;
+  /** Duration of one full breathing cycle in seconds. Default: 6 */
+  duration?: number;
+  /** Easing function for the scale breathing. Default: 'ease-in-out' */
+  easing?: EasingConfig;
+}
+
+export interface FogEffectConfig {
+  /** Unique ID for this fog layer */
+  id: string;
+  /** URL to the fog texture image. Tileable textures work best. */
+  src: string;
+  /** Position offset in base image pixel coordinates. Default: { x: 0, y: 0 } */
+  position?: { x?: number; y?: number };
+  /** Drift direction as a normalized vector. Default: { x: 1, y: 0 } */
+  direction?: { x: number; y: number };
+  /** Drift speed in pixels per second. Default: 20 */
+  speed?: number;
+  /** Base opacity of the fog (0–1). Default: 0.5 */
+  opacity?: number;
+  /** Optional opacity pulse effect. */
+  opacityPulse?: FogOpacityPulse;
+  /** Optional scale breathing effect. */
+  scaleBreathing?: FogScaleBreathing;
+  /** zIndex for depth ordering (same system as MapLayer). Default: 9 */
+  zIndex?: number;
+  /**
+   * Override the auto-calculated parallax factor for this fog layer.
+   * Only used when parallaxConfig is provided on the map.
+   * 1.0 = moves with camera. < 1 = slower (farther). > 1 = faster (closer).
+   */
+  parallaxFactor?: number;
+}
+
 export interface InteractiveMapProps {
   layers: MapLayer[];
   /** ID of the layer to use as the viewport reference. If not provided, defaults to the layer with the lowest zIndex. */
@@ -171,6 +218,8 @@ export interface InteractiveMapProps {
   markers?: MapMarker[];
   /** Array of sprite effect configurations (birds, butterflies, etc.) */
   spriteEffects?: SpriteEffectConfig[];
+  /** Array of fog effect configurations */
+  fogEffects?: FogEffectConfig[];
   /** Called when a marker is clicked. Receives the marker ID. */
   onMarkerClick?: (markerId: string) => void;
   /**

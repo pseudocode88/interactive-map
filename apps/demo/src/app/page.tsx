@@ -101,6 +101,27 @@ export default function Home() {
             scale: 1,
           },
         ]}
+        fogEffects={[
+          {
+            id: "mist",
+            src: "/overlay-cloud-back.png",
+            speed: 15,
+            direction: { x: 1, y: 0.2 },
+            opacity: 0.4,
+            opacityPulse: {
+              minOpacity: 0.2,
+              maxOpacity: 0.5,
+              duration: 5,
+              easing: "ease-in-out",
+            },
+            scaleBreathing: {
+              amplitude: 0.08,
+              duration: 7,
+              easing: "ease-in-out",
+            },
+            zIndex: 9,
+          },
+        ]}
         onMarkerClick={(markerId) => {
           console.log("[demo] marker clicked:", markerId);
           setSelectedMarkerId(markerId);

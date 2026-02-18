@@ -1,6 +1,7 @@
 import type { RefObject } from "react";
 import { useCallback, useMemo } from "react";
 import type {
+  FogEffectConfig,
   MapLayer,
   MapMarker,
   PanConfig,
@@ -10,6 +11,7 @@ import type {
 } from "../types";
 import { computeParallaxFactor } from "../utils/parallax";
 import { CameraController } from "./CameraController";
+import { FogEffect } from "./FogEffect";
 import { MapLayerMesh } from "./MapLayerMesh";
 import { MarkerDot } from "./MarkerDot";
 import { SpriteEffect } from "./SpriteEffect";
@@ -28,6 +30,7 @@ interface MapSceneProps {
   viewportRef: RefObject<{ x: number; y: number; zoom: number }>;
   markers?: MapMarker[];
   spriteEffects?: SpriteEffectConfig[];
+  fogEffects?: FogEffectConfig[];
   onMarkerClick?: (markerId: string) => void;
   onMarkerHoverChange?: (markerId: string | null) => void;
   focusTarget?: { x: number; y: number } | null;
@@ -51,6 +54,7 @@ export function MapScene({
   viewportRef,
   markers,
   spriteEffects,
+  fogEffects,
   onMarkerClick,
   onMarkerHoverChange,
   focusTarget,
@@ -115,6 +119,33 @@ export function MapScene({
             baseFrustumHalfHeight={baseFrustumHalfHeight}
             minZoom={zoomConfig.minZoom}
             maxZoom={zoomConfig.maxZoom}
+            parallaxFactor={parallaxFactor}
+            parallaxMode={parallaxConfig?.mode}
+            viewportRef={viewportRef}
+          />
+        );
+      })}
+      {(fogEffects ?? []).map((fog) => {
+        const parallaxFactor =
+          !parallaxConfig || fog.parallaxFactor !== undefined
+            ? (fog.parallaxFactor ?? 1)
+            : computeParallaxFactor(
+                {
+                  id: fog.id,
+                  src: fog.src,
+                  zIndex: fog.zIndex ?? 9,
+                  parallaxFactor: fog.parallaxFactor,
+                },
+                baseLayerZIndex,
+                parallaxConfig.intensity
+              );
+
+        return (
+          <FogEffect
+            key={fog.id}
+            config={fog}
+            baseWidth={baseWidth}
+            baseHeight={baseHeight}
             parallaxFactor={parallaxFactor}
             parallaxMode={parallaxConfig?.mode}
             viewportRef={viewportRef}

@@ -33,6 +33,7 @@ export function InteractiveMap({
   parallaxConfig,
   markers,
   spriteEffects,
+  fogEffects,
   onMarkerClick,
   resetZoomTrigger,
 }: InteractiveMapProps) {
@@ -164,6 +165,7 @@ export function InteractiveMap({
             viewportRef={viewportRef}
             markers={markers}
             spriteEffects={spriteEffects}
+            fogEffects={fogEffects}
             onMarkerClick={(markerId) => {
               const marker = markersById.get(markerId);
               if (!marker) {
