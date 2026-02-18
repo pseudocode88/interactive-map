@@ -125,7 +125,7 @@ export function MarkerLayer({
         width: "100%",
         height: "100%",
         pointerEvents: "none",
-        overflow: "hidden",
+        overflow: "visible",
       }}
     >
       {markers.map((marker) => {

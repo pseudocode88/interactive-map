@@ -2,8 +2,8 @@ import { useFrame, useLoader } from "@react-three/fiber";
 import type { RefObject } from "react";
 import { useMemo, useRef } from "react";
 import { LinearFilter, Mesh, SRGBColorSpace, TextureLoader } from "three";
-import type { LayerAnimation } from "../types";
-import { computeAnimations } from "../utils/animation";
+import type { CarouselAnimation, LayerAnimation } from "../types";
+import { computeAnimations, normalizeDirection } from "../utils/animation";
 import { resolveEasing } from "../utils/easing";
 import {
   computeAutoScaleFactor,
@@ -46,6 +46,7 @@ export function MapLayerMesh({
 }: MapLayerMeshProps) {
   const texture = useLoader(TextureLoader, src);
   const meshRef = useRef<Mesh>(null);
+  const cloneRef = useRef<Mesh>(null);
   const elapsed = useRef(0);
   const textureWidth = texture.image.width;
   const textureHeight = texture.image.height;
@@ -104,6 +105,24 @@ export function MapLayerMesh({
   const safeAutoScale = Math.max(1, autoScale);
   const geoWidth = textureWidth * safeAutoScale;
   const geoHeight = textureHeight * safeAutoScale;
+  const carouselDirection = useMemo(() => {
+    const carouselAnimation = (animation ?? []).find(
+      (item): item is CarouselAnimation => item.type === "carousel"
+    );
+    if (!carouselAnimation) {
+      return null;
+    }
+
+    return normalizeDirection(carouselAnimation.direction ?? { x: 1, y: 0 });
+  }, [animation]);
+  const hasCarousel = carouselDirection !== null;
+  const tileOffset = useMemo(
+    () => ({
+      x: (carouselDirection?.x ?? 0) * geoWidth,
+      y: (carouselDirection?.y ?? 0) * geoHeight,
+    }),
+    [carouselDirection, geoHeight, geoWidth]
+  );
   const basePosition = {
     x: position?.x ?? 0,
     y: position?.y ?? 0,
@@ -163,12 +182,34 @@ export function MapLayerMesh({
         material.opacity = animationResult.opacity;
       }
     }
+
+    if (hasCarousel && cloneRef.current) {
+      cloneRef.current.position.x = meshRef.current.position.x + tileOffset.x;
+      cloneRef.current.position.y = meshRef.current.position.y + tileOffset.y;
+      cloneRef.current.position.z = meshRef.current.position.z;
+      cloneRef.current.scale.copy(meshRef.current.scale);
+
+      if (animationResult.opacity !== null) {
+        const cloneMaterial = cloneRef.current.material;
+        if ("opacity" in cloneMaterial) {
+          cloneMaterial.opacity = animationResult.opacity;
+        }
+      }
+    }
   });
 
   return (
-    <mesh ref={meshRef} position={[basePosition.x, basePosition.y, zIndex * 0.01]}>
-      <planeGeometry args={[geoWidth, geoHeight]} />
-      <meshBasicMaterial map={processedTexture} transparent />
-    </mesh>
+    <>
+      <mesh ref={meshRef} position={[basePosition.x, basePosition.y, zIndex * 0.01]}>
+        <planeGeometry args={[geoWidth, geoHeight]} />
+        <meshBasicMaterial map={processedTexture} transparent />
+      </mesh>
+      {hasCarousel ? (
+        <mesh ref={cloneRef} position={[basePosition.x, basePosition.y, zIndex * 0.01]}>
+          <planeGeometry args={[geoWidth, geoHeight]} />
+          <meshBasicMaterial map={processedTexture} transparent />
+        </mesh>
+      ) : null}
+    </>
   );
 }
