@@ -1,9 +1,10 @@
 import type { RefObject } from "react";
-import { useRef } from "react";
+import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import type { Mesh, MeshBasicMaterial } from "three";
 import type { LayerAnimation } from "../types";
 import { computeAnimations } from "../utils/animation";
+import { resolveEasing } from "../utils/easing";
 
 interface UseLayerAnimationOptions {
   animations: LayerAnimation[];
@@ -19,6 +20,13 @@ export function useLayerAnimation(
   options: UseLayerAnimationOptions
 ) {
   const elapsed = useRef(0);
+  const resolvedEasings = useMemo(
+    () =>
+      options.animations.map((animation) =>
+        "easing" in animation ? resolveEasing(animation.easing) : undefined
+      ),
+    [options.animations]
+  );
 
   useFrame((_, delta) => {
     if (!meshRef.current || options.animations.length === 0) {
@@ -34,7 +42,8 @@ export function useLayerAnimation(
       options.baseWidth,
       options.baseHeight,
       options.layerWidth,
-      options.layerHeight
+      options.layerHeight,
+      resolvedEasings
     );
 
     meshRef.current.position.x = options.basePosition.x + result.offsetX;

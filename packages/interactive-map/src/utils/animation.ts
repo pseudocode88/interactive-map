@@ -46,11 +46,15 @@ function wrapCentered(value: number, range: number): number {
   return wrapped - halfRange;
 }
 
-export function computeBounce(animation: BounceAnimation, elapsed: number): AnimationResult {
+export function computeBounce(
+  animation: BounceAnimation,
+  elapsed: number,
+  preResolvedEasing?: (t: number) => number
+): AnimationResult {
   const direction = normalizeDirection(animation.direction ?? { x: 0, y: 1 });
   const amplitude = animation.amplitude ?? 20;
   const duration = animation.duration ?? 1;
-  const easingFn = resolveEasing(animation.easing);
+  const easingFn = preResolvedEasing ?? resolveEasing(animation.easing);
 
   const rawProgress = pingPongProgress(elapsed, duration);
   const easedProgress = easingFn(rawProgress);
@@ -81,14 +85,15 @@ export function computeCarousel(
   if (mode === "wrap") {
     const wrapDistX = baseWidth + layerWidth;
     const wrapDistY = baseHeight + layerHeight;
+    const axisContribX =
+      Math.abs(direction.x) > 0 ? wrapDistX / Math.abs(direction.x) : Infinity;
+    const axisContribY =
+      Math.abs(direction.y) > 0 ? wrapDistY / Math.abs(direction.y) : Infinity;
+    const wrapCycleLength = Math.min(axisContribX, axisContribY);
+    const wrappedDisplacement = wrapCentered(displacement, wrapCycleLength);
 
-    if (direction.x !== 0) {
-      offsetX = wrapCentered(offsetX, wrapDistX);
-    }
-
-    if (direction.y !== 0) {
-      offsetY = wrapCentered(offsetY, wrapDistY);
-    }
+    offsetX = direction.x * wrappedDisplacement;
+    offsetY = direction.y * wrappedDisplacement;
   }
 
   return {
@@ -98,11 +103,15 @@ export function computeCarousel(
   };
 }
 
-export function computeFade(animation: FadeAnimation, elapsed: number): AnimationResult {
+export function computeFade(
+  animation: FadeAnimation,
+  elapsed: number,
+  preResolvedEasing?: (t: number) => number
+): AnimationResult {
   const minOpacity = animation.minOpacity ?? 0;
   const maxOpacity = animation.maxOpacity ?? 1;
   const duration = animation.duration ?? 2;
-  const easingFn = resolveEasing(animation.easing);
+  const easingFn = preResolvedEasing ?? resolveEasing(animation.easing);
 
   const rawProgress = pingPongProgress(elapsed, duration);
   const easedProgress = easingFn(rawProgress);
@@ -115,10 +124,14 @@ export function computeFade(animation: FadeAnimation, elapsed: number): Animatio
   };
 }
 
-export function computeWobble(animation: WobbleAnimation, elapsed: number): AnimationResult {
+export function computeWobble(
+  animation: WobbleAnimation,
+  elapsed: number,
+  preResolvedEasing?: (t: number) => number
+): AnimationResult {
   const offsetConfig = animation.offset ?? { x: 10, y: 0 };
   const duration = animation.duration ?? 2;
-  const easingFn = resolveEasing(animation.easing);
+  const easingFn = preResolvedEasing ?? resolveEasing(animation.easing);
 
   const rawProgress = pingPongProgress(elapsed, duration);
   const easedProgress = easingFn(rawProgress);
@@ -137,18 +150,21 @@ export function computeAnimations(
   baseWidth: number,
   baseHeight: number,
   layerWidth: number,
-  layerHeight: number
+  layerHeight: number,
+  resolvedEasings?: (((t: number) => number) | undefined)[]
 ): AnimationResult {
   let totalOffsetX = 0;
   let totalOffsetY = 0;
   let mergedOpacity: number | null = null;
 
-  for (const animation of animations) {
+  for (let i = 0; i < animations.length; i += 1) {
+    const animation = animations[i];
+    const easingFn = resolvedEasings?.[i];
     let result: AnimationResult;
 
     switch (animation.type) {
       case "bounce": {
-        result = computeBounce(animation, elapsed);
+        result = computeBounce(animation, elapsed, easingFn);
         break;
       }
       case "carousel": {
@@ -163,11 +179,11 @@ export function computeAnimations(
         break;
       }
       case "fade": {
-        result = computeFade(animation, elapsed);
+        result = computeFade(animation, elapsed, easingFn);
         break;
       }
       case "wobble": {
-        result = computeWobble(animation, elapsed);
+        result = computeWobble(animation, elapsed, easingFn);
         break;
       }
     }
