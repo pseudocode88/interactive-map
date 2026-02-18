@@ -18,8 +18,8 @@ interface MarkerDotProps {
 const MARKER_RADIUS = 20;
 const TOOLTIP_OFFSET = MARKER_RADIUS * 2;
 const DOT_PULSE_DURATION_SECONDS = 1.5;
-const DOT_PULSE_MIN_SCALE = 0.92;
-const DOT_PULSE_MAX_SCALE = 1.08;
+const DOT_PULSE_MIN_SCALE = 0.88;
+const DOT_PULSE_MAX_SCALE = 1.2;
 
 export function MarkerDot({
   marker,
