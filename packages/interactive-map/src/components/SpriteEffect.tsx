@@ -128,7 +128,8 @@ export function SpriteEffect({
         config,
         baseWidth,
         baseHeight,
-        sheetMeta.frameCount
+        sheetMeta.frameCount,
+        sheetMeta.frameWidth
       );
 
       if (!alive) {

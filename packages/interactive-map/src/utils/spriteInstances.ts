@@ -132,7 +132,8 @@ export function updateInstance(
   config: SpriteEffectConfig,
   baseWidth: number,
   baseHeight: number,
-  frameCount: number
+  frameCount: number,
+  frameSize: number
 ): boolean {
   instance.x += instance.dx * instance.speed * delta;
   instance.y += instance.dy * instance.speed * delta;
@@ -148,7 +149,7 @@ export function updateInstance(
   }
 
   const bounds = toWorldBounds(baseWidth, baseHeight);
-  const margin = 64 * (config.scale ?? 1);
+  const margin = frameSize * (config.scale ?? 1);
 
   return !(
     instance.x < bounds.minX - margin ||
