@@ -26,6 +26,7 @@ interface MapSceneProps {
   viewportRef: RefObject<{ x: number; y: number; zoom: number }>;
   markers?: MapMarker[];
   onMarkerClick?: (markerId: string) => void;
+  onMarkerHoverChange?: (markerId: string | null) => void;
   focusTarget?: { x: number; y: number } | null;
   onFocusComplete?: () => void;
   onFocusInterrupted?: () => void;
@@ -47,6 +48,7 @@ export function MapScene({
   viewportRef,
   markers,
   onMarkerClick,
+  onMarkerHoverChange,
   focusTarget,
   onFocusComplete,
   onFocusInterrupted,
@@ -122,6 +124,7 @@ export function MapScene({
             worldX={worldX}
             worldY={worldY}
             zPosition={markerZPosition}
+            onHoverChange={onMarkerHoverChange ?? (() => undefined)}
             onClick={() => onMarkerClick?.(marker.id)}
           />
         );

@@ -13,6 +13,7 @@ import type {
 import { useBaseImageSize } from "../hooks/useBaseImageSize";
 import { useContainerSize } from "../hooks/useContainerSize";
 import { MapScene } from "./MapScene";
+import { MarkerTooltip } from "./MarkerTooltip";
 
 function toWorldCoordinates(x: number, y: number, baseWidth: number, baseHeight: number) {
   return {
@@ -37,6 +38,7 @@ export function InteractiveMap({
   const containerRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef({ x: 0, y: 0, zoom: zoomConfig?.initialZoom ?? 1 });
   const [focusTarget, setFocusTarget] = useState<{ x: number; y: number } | null>(null);
+  const [hoveredMarkerId, setHoveredMarkerId] = useState<string | null>(null);
 
   const baseLayer = useMemo(() => {
     if (layers.length === 0) {
@@ -63,6 +65,7 @@ export function InteractiveMap({
     () => new Map((markers ?? []).map((marker) => [marker.id, marker])),
     [markers]
   );
+  const hoveredMarker = hoveredMarkerId ? markersById.get(hoveredMarkerId) ?? null : null;
 
   if (
     !baseLayer ||
@@ -115,6 +118,10 @@ export function InteractiveMap({
     halfHeight = halfWidth * (containerSize.height / containerSize.width);
   }
 
+  const hoveredWorldCoordinates = hoveredMarker
+    ? toWorldCoordinates(hoveredMarker.x, hoveredMarker.y, baseSize.width, baseSize.height)
+    : { x: 0, y: 0 };
+
   return (
     <div
       ref={containerRef}
@@ -166,6 +173,9 @@ export function InteractiveMap({
               );
               onMarkerClick?.(markerId);
             }}
+            onMarkerHoverChange={(markerId) => {
+              setHoveredMarkerId(markerId);
+            }}
             focusTarget={focusTarget}
             onFocusComplete={() => setFocusTarget(null)}
             onFocusInterrupted={() => setFocusTarget(null)}
@@ -176,6 +186,15 @@ export function InteractiveMap({
           />
         </Suspense>
       </Canvas>
+      <MarkerTooltip
+        marker={hoveredMarker}
+        worldX={hoveredWorldCoordinates.x}
+        worldY={hoveredWorldCoordinates.y}
+        containerRef={containerRef}
+        viewportRef={viewportRef}
+        baseFrustumHalfWidth={halfWidth}
+        baseFrustumHalfHeight={halfHeight}
+      />
     </div>
   );
 }

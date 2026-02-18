@@ -1,10 +1,9 @@
 "use client";
 
-import { Html } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { AdditiveBlending } from "three";
-import type { Group, Mesh, MeshBasicMaterial } from "three";
+import type { Mesh, MeshBasicMaterial } from "three";
 
 import type { MapMarker } from "../types";
 
@@ -13,11 +12,11 @@ interface MarkerDotProps {
   worldX: number;
   worldY: number;
   zPosition: number;
+  onHoverChange: (markerId: string | null) => void;
   onClick: () => void;
 }
 
 const MARKER_RADIUS = 20;
-const TOOLTIP_OFFSET = MARKER_RADIUS * 2;
 const DOT_PULSE_DURATION_SECONDS = 1.5;
 const DOT_PULSE_MIN_SCALE = 0.88;
 const DOT_PULSE_MAX_SCALE = 1.2;
@@ -29,6 +28,7 @@ export function MarkerDot({
   worldX,
   worldY,
   zPosition,
+  onHoverChange,
   onClick,
 }: MarkerDotProps) {
   const dotRef = useRef<Mesh>(null);
@@ -36,30 +36,9 @@ export function MarkerDot({
   const pulseRef = useRef<Mesh>(null);
   const haloMaterialRef = useRef<MeshBasicMaterial>(null);
   const pulseMaterialRef = useRef<MeshBasicMaterial>(null);
-  const tooltipGroupRef = useRef<Group>(null);
-  const tooltipPinTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const currentScale = useRef(1);
-  const [isHovered, setIsHovered] = useState(false);
-  const [isTooltipPinned, setIsTooltipPinned] = useState(false);
+  const isHoveredRef = useRef(false);
   const color = marker.color ?? "#000";
-
-  const tooltipStyle = useMemo(
-    () => ({
-      position: "relative" as const,
-      maxWidth: 200,
-      padding: "4px 8px",
-      borderRadius: 4,
-      background: "rgba(0, 0, 0, 0.8)",
-      color: "#fff",
-      fontSize: 12,
-      lineHeight: 1.2,
-      whiteSpace: "nowrap" as const,
-      overflow: "hidden",
-      textOverflow: "ellipsis" as const,
-      pointerEvents: "none" as const,
-    }),
-    []
-  );
 
   useFrame((state) => {
     const dot = dotRef.current;
@@ -79,35 +58,32 @@ export function MarkerDot({
     const dotPulseScale =
       DOT_PULSE_MIN_SCALE +
       (DOT_PULSE_MAX_SCALE - DOT_PULSE_MIN_SCALE) * pulseProgress;
-    const hoverScale = isHovered ? 1.3 : 1;
+    const hoverScale = isHoveredRef.current ? 1.3 : 1;
     const targetScale = (hoverScale * dotPulseScale) / zoom;
     currentScale.current += (targetScale - currentScale.current) * 0.2;
     dot.scale.setScalar(currentScale.current);
 
-    const haloScale = (HALO_BASE_SCALE * (isHovered ? 1.12 : 1)) / zoom;
+    const haloScale = (HALO_BASE_SCALE * (isHoveredRef.current ? 1.12 : 1)) / zoom;
     halo.scale.setScalar(haloScale);
-    haloMaterial.opacity = isHovered ? HALO_BASE_OPACITY + 0.14 : HALO_BASE_OPACITY;
+    haloMaterial.opacity = isHoveredRef.current
+      ? HALO_BASE_OPACITY + 0.14
+      : HALO_BASE_OPACITY;
 
     const pulseElapsed = (state.clock.getElapsedTime() % 1.5) / 1.5;
     const pulseScale = (1.25 + pulseElapsed * 1.35) / zoom;
     const pulseOpacity = 0.9 * (1 - pulseElapsed);
     pulse.scale.setScalar(pulseScale);
     pulseMaterial.opacity = pulseOpacity;
-    if (tooltipGroupRef.current) {
-      tooltipGroupRef.current.position.y = TOOLTIP_OFFSET / zoom;
-    }
   });
 
   useEffect(() => {
     return () => {
-      if (tooltipPinTimeoutRef.current) {
-        clearTimeout(tooltipPinTimeoutRef.current);
+      if (isHoveredRef.current) {
+        onHoverChange(null);
       }
-      document.body.style.cursor = "default";
+      document.body.style.cursor = "auto";
     };
-  }, []);
-
-  const showTooltip = isHovered || isTooltipPinned;
+  }, [onHoverChange]);
 
   return (
     <group position={[worldX, worldY, zPosition]}>
@@ -118,24 +94,19 @@ export function MarkerDot({
         }}
         onClick={(event) => {
           event.stopPropagation();
-          setIsTooltipPinned(true);
-          if (tooltipPinTimeoutRef.current) {
-            clearTimeout(tooltipPinTimeoutRef.current);
-          }
-          tooltipPinTimeoutRef.current = setTimeout(() => {
-            setIsTooltipPinned(false);
-          }, 1200);
           onClick();
         }}
-        onPointerEnter={(event) => {
+        onPointerOver={(event) => {
           event.stopPropagation();
-          setIsHovered(true);
+          isHoveredRef.current = true;
+          onHoverChange(marker.id);
           document.body.style.cursor = "pointer";
         }}
-        onPointerLeave={(event) => {
+        onPointerOut={(event) => {
           event.stopPropagation();
-          setIsHovered(false);
-          document.body.style.cursor = "default";
+          isHoveredRef.current = false;
+          onHoverChange(null);
+          document.body.style.cursor = "auto";
         }}
       >
         <circleGeometry args={[MARKER_RADIUS, 32]} />
@@ -165,29 +136,6 @@ export function MarkerDot({
           blending={AdditiveBlending}
         />
       </mesh>
-
-      {showTooltip ? (
-        <group ref={tooltipGroupRef} position={[0, TOOLTIP_OFFSET, 0]}>
-          <Html center occlude={false} zIndexRange={[100, 0]} style={{ pointerEvents: "none" }}>
-            <div style={tooltipStyle}>
-              {marker.label}
-              <div
-                style={{
-                  position: "absolute",
-                  left: "50%",
-                  top: "100%",
-                  transform: "translateX(-50%)",
-                  width: 0,
-                  height: 0,
-                  borderLeft: "5px solid transparent",
-                  borderRight: "5px solid transparent",
-                  borderTop: "5px solid rgba(0, 0, 0, 0.8)",
-                }}
-              />
-            </div>
-          </Html>
-        </group>
-      ) : null}
     </group>
   );
 }
