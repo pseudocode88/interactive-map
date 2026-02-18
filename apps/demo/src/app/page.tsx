@@ -1,12 +1,21 @@
 import { InteractiveMap } from "@interactive-map/core";
 
 const layers = [
+  { id: "cloud-back", 
+    src: "/overlay-cloud-back.png", 
+    zIndex: -1,
+    animation: [
+      {
+        type: "carousel" as const
+      }
+    ] 
+  },
   { id: "base", src: "/base-map.png", zIndex: 0 },
   {
     id: "cloud",
     src: "/overlay.png",
     zIndex: 1,
-    position: { x: 0, y: 100 },
+    position: { x: 0, y: -10 },
     animation: [
       {
         type: "bounce" as const,

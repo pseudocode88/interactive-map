@@ -2,7 +2,7 @@
 Name: Chunk 5 - Layer Animations
 Type: Feature
 Created On: 2026-02-18
-Modified On: 2026-02-18
+Modified On: 2026-02-18 (Review Fixes)
 ---
 
 # Brief
@@ -791,5 +791,163 @@ This demonstrates parallel animation chaining: the overlay bounces vertically wh
 - [ ] TypeScript compiles with no errors (`tsc --noEmit`)
 - [ ] No console errors during interactions
 
+# Review Fixes
+
+The following issues were found during code review. Fix all of them on the existing branch.
+
+## Fix 1 (Medium): Diagonal carousel wrapping produces zigzag instead of straight-line movement
+
+**File:** `packages/interactive-map/src/utils/animation.ts`
+
+**Problem:** In `computeCarousel`, X and Y axes are wrapped independently using `wrapCentered`. If the direction is diagonal (e.g., `{ x: 1, y: 1 }`) and the base image is not square (`baseWidth + layerWidth !== baseHeight + layerHeight`), the X axis wraps at a different cycle length than Y. This causes the layer to break out of its straight-line path and zigzag.
+
+For example, with `direction: { x: 1, y: 1 }`, `baseWidth=1000, layerWidth=200` (wrapDistX=1200) and `baseHeight=600, layerHeight=200` (wrapDistY=800): X wraps every 1200/0.707 ≈ 1697 units of displacement, Y wraps every 800/0.707 ≈ 1131 units. After Y wraps but before X wraps, the layer jumps diagonally.
+
+**Fix:** Compute wrapping as a single scalar displacement along the movement direction, then re-project to X/Y. Replace the per-axis wrapping block in `computeCarousel`:
+
+```ts
+if (mode === "wrap") {
+  const wrapDistX = baseWidth + layerWidth;
+  const wrapDistY = baseHeight + layerHeight;
+
+  // Compute wrap cycle length along the direction vector.
+  // The layer must travel far enough that it fully exits the bounds on every active axis.
+  // Use the axis that requires the longest travel distance.
+  const axisContribX =
+    Math.abs(direction.x) > 0 ? wrapDistX / Math.abs(direction.x) : Infinity;
+  const axisContribY =
+    Math.abs(direction.y) > 0 ? wrapDistY / Math.abs(direction.y) : Infinity;
+  const wrapCycleLength = Math.min(axisContribX, axisContribY);
+
+  // Wrap the scalar displacement, then re-project to X/Y
+  const wrappedDisplacement = wrapCentered(displacement, wrapCycleLength);
+  offsetX = direction.x * wrappedDisplacement;
+  offsetY = direction.y * wrappedDisplacement;
+}
+```
+
+This ensures:
+- The layer always moves in a straight line along its direction vector
+- Wrapping happens as a single scalar value, so X and Y stay in sync
+- `Math.min` picks the tighter axis so the layer fully exits before re-entering on the smaller dimension
+
+## Fix 2 (Minor): `resolveEasing` allocates a new closure every frame
+
+**Files:** `packages/interactive-map/src/utils/animation.ts`, `packages/interactive-map/src/hooks/useLayerAnimation.ts`
+
+**Problem:** `resolveEasing(animation.easing)` is called inside `computeBounce`, `computeFade`, and `computeWobble`. Since these run via `useFrame` at ~60fps, a new closure is allocated every frame per animation. With multiple animated layers, this creates unnecessary GC pressure.
+
+**Fix:** Cache the resolved easing functions in `useLayerAnimation` using `useMemo`, and pass them through to the compute utilities.
+
+**Step 1:** Update `useLayerAnimation.ts` to pre-resolve easings:
+
+```ts
+import { useMemo, useRef } from "react";
+import { resolveEasing } from "../utils/easing";
+
+export function useLayerAnimation(
+  meshRef: RefObject<Mesh | null>,
+  options: UseLayerAnimationOptions
+) {
+  const elapsed = useRef(0);
+
+  // Pre-resolve easing functions — only re-created when animation config changes
+  const resolvedEasings = useMemo(
+    () =>
+      options.animations.map((anim) =>
+        "easing" in anim ? resolveEasing(anim.easing) : undefined
+      ),
+    [options.animations]
+  );
+
+  useFrame((_, delta) => {
+    if (!meshRef.current || options.animations.length === 0) return;
+
+    const cappedDelta = Math.min(delta, 0.1);
+    elapsed.current += cappedDelta;
+
+    const result = computeAnimations(
+      options.animations,
+      elapsed.current,
+      options.baseWidth,
+      options.baseHeight,
+      options.layerWidth,
+      options.layerHeight,
+      resolvedEasings
+    );
+
+    meshRef.current.position.x = options.basePosition.x + result.offsetX;
+    meshRef.current.position.y = options.basePosition.y + result.offsetY;
+
+    if (result.opacity !== null) {
+      const material = meshRef.current.material as MeshBasicMaterial;
+      material.opacity = result.opacity;
+    }
+  });
+}
+```
+
+**Step 2:** Update `computeAnimations` in `animation.ts` to accept and forward pre-resolved easings:
+
+```ts
+export function computeAnimations(
+  animations: LayerAnimation[],
+  elapsed: number,
+  baseWidth: number,
+  baseHeight: number,
+  layerWidth: number,
+  layerHeight: number,
+  resolvedEasings?: (((t: number) => number) | undefined)[]
+): AnimationResult {
+  // ... existing setup ...
+
+  for (let i = 0; i < animations.length; i++) {
+    const animation = animations[i];
+    const easingFn = resolvedEasings?.[i];
+    let result: AnimationResult;
+
+    switch (animation.type) {
+      case "bounce":
+        result = computeBounce(animation, elapsed, easingFn);
+        break;
+      case "carousel":
+        result = computeCarousel(animation, elapsed, baseWidth, baseHeight, layerWidth, layerHeight);
+        break;
+      case "fade":
+        result = computeFade(animation, elapsed, easingFn);
+        break;
+      case "wobble":
+        result = computeWobble(animation, elapsed, easingFn);
+        break;
+    }
+
+    // ... existing merge logic ...
+  }
+
+  return { offsetX: totalOffsetX, offsetY: totalOffsetY, opacity: mergedOpacity };
+}
+```
+
+**Step 3:** Update `computeBounce`, `computeFade`, and `computeWobble` to accept an optional pre-resolved easing function:
+
+```ts
+// Example for computeBounce (same pattern for computeFade and computeWobble):
+export function computeBounce(
+  animation: BounceAnimation,
+  elapsed: number,
+  preResolvedEasing?: (t: number) => number
+): AnimationResult {
+  const direction = normalizeDirection(animation.direction ?? { x: 0, y: 1 });
+  const amplitude = animation.amplitude ?? 20;
+  const duration = animation.duration ?? 1;
+  const easingFn = preResolvedEasing ?? resolveEasing(animation.easing);
+
+  // ... rest unchanged
+}
+```
+
+This keeps the API backward-compatible (functions still work without pre-resolved easings) while eliminating per-frame closure allocations when called from the hook.
+
 # Log
 - **2026-02-18**: Plan created for Chunk 5 — Layer Animations covering bounce, carousel, fade, wobble animation types with parallel chaining, easing system (named presets + cubic-bezier), tab visibility pause, and per-animation easing control.
+- **2026-02-18**: Review fixes added — (1) Medium: compute carousel wrapping as scalar along direction vector to prevent zigzag on diagonal directions, (2) Minor: cache resolved easing functions in useMemo to avoid per-frame closure allocations.
