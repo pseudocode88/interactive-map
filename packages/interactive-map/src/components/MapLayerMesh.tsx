@@ -1,6 +1,8 @@
 import { useLoader } from "@react-three/fiber";
-import { useMemo } from "react";
-import { LinearFilter, TextureLoader } from "three";
+import { useMemo, useRef } from "react";
+import { LinearFilter, Mesh, TextureLoader } from "three";
+import { useLayerAnimation } from "../hooks/useLayerAnimation";
+import type { LayerAnimation } from "../types";
 
 interface MapLayerMeshProps {
   src: string;
@@ -9,10 +11,21 @@ interface MapLayerMeshProps {
     x?: number;
     y?: number;
   };
+  animation?: LayerAnimation[];
+  baseWidth: number;
+  baseHeight: number;
 }
 
-export function MapLayerMesh({ src, zIndex, position }: MapLayerMeshProps) {
+export function MapLayerMesh({
+  src,
+  zIndex,
+  position,
+  animation,
+  baseWidth,
+  baseHeight,
+}: MapLayerMeshProps) {
   const texture = useLoader(TextureLoader, src);
+  const meshRef = useRef<Mesh>(null);
 
   const processedTexture = useMemo(() => {
     texture.minFilter = LinearFilter;
@@ -24,9 +37,22 @@ export function MapLayerMesh({ src, zIndex, position }: MapLayerMeshProps) {
 
   const textureWidth = texture.image.width;
   const textureHeight = texture.image.height;
+  const basePosition = {
+    x: position?.x ?? 0,
+    y: position?.y ?? 0,
+  };
+
+  useLayerAnimation(meshRef, {
+    animations: animation ?? [],
+    basePosition,
+    baseWidth,
+    baseHeight,
+    layerWidth: textureWidth,
+    layerHeight: textureHeight,
+  });
 
   return (
-    <mesh position={[position?.x ?? 0, position?.y ?? 0, zIndex * 0.01]}>
+    <mesh ref={meshRef} position={[basePosition.x, basePosition.y, zIndex * 0.01]}>
       <planeGeometry args={[textureWidth, textureHeight]} />
       <meshBasicMaterial map={processedTexture} transparent />
     </mesh>

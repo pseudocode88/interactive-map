@@ -27,14 +27,25 @@ export function MapScene({
         panConfig={panConfig}
         zoomConfig={zoomConfig}
       />
-      {sortedLayers.map((layer) => (
-        <MapLayerMesh
-          key={layer.id}
-          src={layer.src}
-          zIndex={layer.zIndex}
-          position={layer.position}
-        />
-      ))}
+      {sortedLayers.map((layer) => {
+        const animation = layer.animation
+          ? Array.isArray(layer.animation)
+            ? layer.animation
+            : [layer.animation]
+          : undefined;
+
+        return (
+          <MapLayerMesh
+            key={layer.id}
+            src={layer.src}
+            zIndex={layer.zIndex}
+            position={layer.position}
+            animation={animation}
+            baseWidth={baseWidth}
+            baseHeight={baseHeight}
+          />
+        );
+      })}
     </>
   );
 }

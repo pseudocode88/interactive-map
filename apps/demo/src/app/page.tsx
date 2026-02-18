@@ -3,10 +3,20 @@ import { InteractiveMap } from "@interactive-map/core";
 const layers = [
   { id: "base", src: "/base-map.png", zIndex: 0 },
   {
-    id: "overlay",
+    id: "cloud",
     src: "/overlay.png",
     zIndex: 1,
-    position: { x: 0, y: 0 },
+    position: { x: 0, y: 100 },
+    animation: [
+      {
+        type: "bounce" as const,
+        direction: { x: 0, y: 1 },
+        amplitude: 15,
+        duration: 2,
+        easing: "ease-in-out" as const,
+      },
+      { type: "fade" as const, minOpacity: 0.4, maxOpacity: 1, duration: 3 },
+    ],
   },
 ];
 
