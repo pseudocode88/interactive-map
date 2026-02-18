@@ -6,7 +6,7 @@ const layers = [
     id: "overlay",
     src: "/overlay.png",
     zIndex: 1,
-    position: { x: 0, y: -50 },
+    position: { x: 0, y: 0 },
   },
 ];
 
@@ -16,7 +16,7 @@ export default function Home() {
       <InteractiveMap
         layers={layers}
         panConfig={{ enabled: true, easingFactor: 0.15 }}
-        zoomConfig={{ enabled: true, minZoom: 1, maxZoom: 3 }}
+        zoomConfig={{ enabled: true, minZoom: 1, maxZoom: 2, initialZoom: 1.4 }}
       />
     </main>
   );

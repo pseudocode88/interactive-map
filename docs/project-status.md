@@ -44,20 +44,28 @@
 - Layer positioning with optional x/y pixel offsets
 - Images maintain natural aspect ratio without stretching
 
+### Chunk 4: Zoom Controls
+**Status:** Done
+**Plan:** [chunk-4-zoom-controls-2026-02-18.md](plans/done/chunk-4-zoom-controls-2026-02-18.md)
+
+- Scroll-wheel zoom in/out with cursor-anchored zooming
+- Pinch-to-zoom for touch devices with midpoint anchoring
+- Bounded zoom range (min/max limits) with configurable `ZoomConfig`
+- Smooth zoom animation/lerp with easing
+- Dynamic pan boundary clamping based on current zoom level
+
+### Fix: Responsive Cover Fitting
+**Status:** Done
+**Plan:** [fix-responsive-cover-fitting-2026-02-18.md](plans/done/fix-responsive-cover-fitting-2026-02-18.md)
+
+- Cover-fit strategy: compares container aspect ratio to image aspect ratio
+- Portrait/tall containers fit to height (overflow width, pan left/right)
+- Landscape/wide containers fit to width (overflow height, pan up/down)
+- No empty space at any screen size; works across desktop, tablet, mobile
+
 ---
 
 ## Remaining Chunks
-
-### Chunk 4: Zoom Controls
-**Status:** Not Started
-
-Scope (from project brief):
-- Scroll-wheel zoom in/out
-- Pinch-to-zoom for touch devices
-- Bounded zoom range (min/max limits)
-- Smooth zoom animation/lerp
-- Update pan boundaries dynamically based on current zoom level
-- Pan controls already anticipate zoom integration (boundary clamping adjusts with zoom)
 
 ### Chunk 5: Markers & Events
 **Status:** Not Started
@@ -89,11 +97,11 @@ packages/interactive-map/src/
 │   ├── InteractiveMap.tsx      # Public entry point
 │   ├── MapScene.tsx            # Scene container, sorts/renders layers
 │   ├── MapLayerMesh.tsx        # Individual layer rendering
-│   └── CameraController.tsx   # Pan (+ future zoom) controls
+│   └── CameraController.tsx   # Pan + zoom controls (cover-fit aware)
 ├── hooks/
 │   ├── useBaseImageSize.ts     # Base image dimension detection
 │   └── useContainerSize.ts     # Container ResizeObserver
 ├── types/
-│   └── index.ts                # MapLayer, InteractiveMapProps, PanConfig
+│   └── index.ts                # MapLayer, InteractiveMapProps, PanConfig, ZoomConfig
 └── index.ts                    # Barrel exports
 ```
