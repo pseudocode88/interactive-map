@@ -1,6 +1,6 @@
 # InteractiveMap - Project Status
 
-**Last Updated:** 2026-02-18
+**Last Updated:** 2026-02-19
 **Branch:** main (clean)
 
 ---
@@ -125,6 +125,17 @@
 - Parallax-aware (participates in parallax like regular layers)
 - Frame-by-frame sprite sheet animation
 
+### Chunk 7c: Fog Effects
+**Status:** Done
+**Plan:** [chunk-7c-fog-effects-2026-02-19.md](plans/done/chunk-7c-fog-effects-2026-02-19.md)
+
+- Seamlessly tiling fog textures via `RepeatWrapping` + UV offset drift
+- Three composable visual modes: drift, opacity pulse (breathing), scale breathing
+- Per-effect easing configuration
+- Multiple independent fog layers via array of `FogEffectConfig`
+- `FogEffect` component with parallax support (depth + drift modes)
+- `utils/fog.ts` for pure fog math (drift, opacity, scale)
+
 ---
 
 ## Remaining Chunks
@@ -136,14 +147,6 @@ Scope:
 - Particle system with Three.js Points + BufferGeometry
 - Configurable sparkle regions, count, size, color, speed
 - Per-layer or global particle effects
-
-### Chunk 7c: Fog Effects
-**Status:** Not Started
-
-Scope:
-- Animated semi-transparent texture drift
-- Localized or full-screen fog overlay
-- Parallax-aware fog layers
 
 ### Chunk 7d: Custom Shader Support
 **Status:** Not Started
@@ -160,12 +163,13 @@ Scope:
 packages/interactive-map/src/
 ├── components/
 │   ├── InteractiveMap.tsx      # Public entry point
-│   ├── MapScene.tsx            # Scene container, sorts/renders layers + markers + sprites
+│   ├── MapScene.tsx            # Scene container, sorts/renders layers + fog + sprites + markers
 │   ├── MapLayerMesh.tsx        # Individual layer rendering (sRGB, parallax)
 │   ├── CameraController.tsx    # Pan + zoom controls (cover-fit, baseLayerId aware)
 │   ├── MarkerDot.tsx           # Pulsing glow marker rendered on map
 │   ├── MarkerTooltip.tsx       # Hover tooltip for markers
-│   └── SpriteEffect.tsx        # Animated sprite sheet effects (birds, butterflies, etc.)
+│   ├── SpriteEffect.tsx        # Animated sprite sheet effects (birds, butterflies, etc.)
+│   └── FogEffect.tsx           # Animated fog overlay with tiling, opacity pulse, scale breathing
 ├── hooks/
 │   ├── useBaseImageSize.ts     # Base image dimension detection
 │   └── useContainerSize.ts     # Container ResizeObserver
@@ -174,8 +178,9 @@ packages/interactive-map/src/
 │   ├── animation.ts            # Pure animation math (bounce, carousel, fade, wobble)
 │   ├── parallax.ts             # Parallax factor calculations (depth + drift modes)
 │   ├── spriteSheet.ts          # Sprite sheet grid detection + frame UV calculation
-│   └── spriteInstances.ts      # Sprite instance lifecycle (spawn, update, despawn)
+│   ├── spriteInstances.ts      # Sprite instance lifecycle (spawn, update, despawn)
+│   └── fog.ts                  # Pure fog math (drift, opacity pulse, scale breathing)
 ├── types/
-│   └── index.ts                # MapLayer, MapMarker, SpriteEffectConfig, InteractiveMapProps, etc.
+│   └── index.ts                # MapLayer, MapMarker, SpriteEffectConfig, FogEffectConfig, InteractiveMapProps, etc.
 └── index.ts                    # Barrel exports
 ```
