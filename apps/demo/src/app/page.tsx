@@ -62,10 +62,10 @@ const layers = [
 ];
 
 const markers: MapMarker[] = [
-  { id: "city-west", x: 900, y: 1280, label: "West Watchtower", color: "#333" },
-  { id: "city-center", x: 1900, y: 1040, label: "Capital District", color: "#333" },
-  { id: "city-east", x: 3000, y: 1260, label: "Harbor Gate", color: "#333" },
-  { id: "peak-north", x: 2250, y: 520, label: "Northern Peaks", color: "#333" },
+  { id: "castle", x: 900, y: 1280, label: "Castle", color: "#ff4444" },
+  { id: "village", x: 1900, y: 1040, label: "Village", color: "#44aaff" },
+  { id: "harbor", x: 3000, y: 1260, label: "Harbor Gate", color: "#44ff88" },
+  { id: "forest", x: 2250, y: 520, label: "Dark Forest", color: "#ffaa33" },
 ];
 
 function buildMarkerMap(items: MapMarker[]) {
@@ -112,9 +112,11 @@ export default function Home() {
           display: "flex",
           gap: 12,
           alignItems: "center",
+          flexWrap: "wrap",
         }}
       >
         <span>Selected Marker: {selectedLabel}</span>
+        <span style={{ opacity: 0.85 }}>Click marker to focus</span>
         <button
           type="button"
           onClick={() => setResetZoomTrigger((value) => value + 1)}
