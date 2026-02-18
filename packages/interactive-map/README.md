@@ -56,6 +56,80 @@ export default function Page() {
 }
 ```
 
+## Implementation Example (Next.js)
+
+Use this pattern in `app/page.tsx` or any client component.
+
+```tsx
+"use client";
+
+import { InteractiveMap } from "@interactive-map/core";
+import type { MapLayer } from "@interactive-map/core";
+
+const layers = [
+  {
+    id: "cloud-back",
+    src: "/overlay-cloud-back.png",
+    zIndex: -1,
+    animation: [
+      {
+        type: "carousel",
+        direction: { x: 1, y: 0 },
+        speed: 40,
+        mode: "wrap",
+      },
+    ],
+  },
+  { id: "base", src: "/base-map.png", zIndex: 0 },
+  {
+    id: "cloud-front",
+    src: "/overlay.png",
+    zIndex: 1,
+    position: { x: 0, y: -10 },
+    animation: [
+      {
+        type: "bounce",
+        direction: { x: 0, y: 1 },
+        amplitude: 14,
+        duration: 2,
+        easing: "ease-in-out",
+      },
+      {
+        type: "fade",
+        minOpacity: 0.45,
+        maxOpacity: 1,
+        duration: 3,
+        easing: [0.25, 0.1, 0.25, 1],
+      },
+    ],
+  },
+] satisfies MapLayer[];
+
+export default function HomePage() {
+  return (
+    <main style={{ width: "100vw", height: "100vh", background: "#81D4E7" }}>
+      <InteractiveMap
+        layers={layers}
+        panConfig={{ enabled: true, easingFactor: 0.15 }}
+        zoomConfig={{
+          enabled: true,
+          minZoom: 1,
+          maxZoom: 2.5,
+          initialZoom: 1.3,
+          scrollSpeed: 0.001,
+          easingFactor: 0.15,
+        }}
+      />
+    </main>
+  );
+}
+```
+
+Notes:
+- Place image files inside your Next.js `public/` folder.
+- Keep the base layer at the lowest `zIndex` (it defines map bounds).
+- Combine multiple animations in `animation: []` to run them in parallel.
+
 ## `InteractiveMap` Props
 
 - `layers: MapLayer[]` (required)
@@ -120,4 +194,3 @@ export type {
   ZoomConfig,
 } from "@interactive-map/core";
 ```
-
