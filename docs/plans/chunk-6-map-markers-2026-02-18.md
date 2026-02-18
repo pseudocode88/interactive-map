@@ -555,7 +555,7 @@ Alternatively, if tooltip show/hide can tolerate being driven by the rAF loop (w
 
 **File (new):** `packages/interactive-map/src/components/MarkerDot.tsx`
 
-A single marker rendered as a Three.js mesh inside the R3F scene. Each marker is a small circle with a glow pulse and a Drei `<Html>` tooltip shown only on hover.
+A single marker rendered as a Three.js mesh inside the R3F scene. Each marker is a small circle with a glow pulse effect. No HTML, no Drei `<Html>` — tooltip is handled by a separate global DOM tooltip (see 9b).
 
 **Props:**
 ```ts
@@ -564,7 +564,7 @@ interface MarkerDotProps {
   worldX: number;
   worldY: number;
   zPosition: number;
-  baseFrustumHalfWidth: number;
+  onHoverChange: (markerId: string | null) => void;
   onClick: () => void;
 }
 ```
@@ -593,55 +593,156 @@ interface MarkerDotProps {
 
 **Hover and click:**
 - Use R3F's native pointer events on the dot mesh: `onPointerEnter`, `onPointerLeave`, `onClick`
-- Track `isHovered` state locally with `useState`
+- Track `isHovered` locally with a ref (not state — avoids re-renders, scale is driven by `useFrame`)
+- On hover, notify parent via `onHoverChange(marker.id)` / `onHoverChange(null)` — this drives the global tooltip
 - On hover, scale the dot to 1.3x (multiply the zoom-compensated scale by 1.3) — apply via lerp in `useFrame` for smooth transition:
   ```ts
-  const targetScale = (isHovered ? 1.3 : 1) / zoom;
+  const targetScale = (isHoveredRef.current ? 1.3 : 1) / zoom;
   currentScale.current += (targetScale - currentScale.current) * 0.2;
   meshRef.current.scale.setScalar(currentScale.current);
   ```
-- `onClick` calls the parent's `onMarkerClick(marker.id)`
-
-**Tooltip (Drei `<Html>`):**
-- **Only mount when hovered** — this avoids Drei's frustum culling bug because the camera is always near the marker when the user is hovering it
-- Render Drei `<Html center>` positioned slightly above the dot:
-  ```tsx
-  {isHovered && (
-    <Html center position={[0, 14 / zoom, 0]} style={{ pointerEvents: "none" }}>
-      <div style={{
-        background: "rgba(0,0,0,0.8)",
-        color: "#fff",
-        fontSize: 12,
-        padding: "4px 8px",
-        borderRadius: 4,
-        whiteSpace: "nowrap",
-        maxWidth: 200,
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-      }}>
-        {marker.label}
-        {/* Small triangle arrow pointing down */}
-        <div style={{
-          position: "absolute",
-          left: "50%",
-          top: "100%",
-          transform: "translateX(-50%)",
-          borderLeft: "5px solid transparent",
-          borderRight: "5px solid transparent",
-          borderTop: "5px solid rgba(0,0,0,0.8)",
-        }} />
-      </div>
-    </Html>
-  )}
+- `onClick` calls the parent's `onClick()`
+- Set `cursor: "pointer"` via R3F's `onPointerOver` / `onPointerOut`:
+  ```ts
+  onPointerOver={() => { document.body.style.cursor = "pointer"; }}
+  onPointerOut={() => { document.body.style.cursor = "auto"; }}
   ```
-- The `position` y-offset uses `14 / zoom` to keep tooltip distance consistent regardless of zoom
-- `pointerEvents: "none"` so the tooltip doesn't interfere with hover detection
 
-**Important:** Set `cursor: "pointer"` on the mesh wrapper or use R3F's `onPointerOver` to change the document cursor.
+### 9b: Create `MarkerTooltip.tsx` — Global DOM tooltip
 
-### 9b: Update `MapScene.tsx`
+**File (new):** `packages/interactive-map/src/components/MarkerTooltip.tsx`
 
-- Accept `markers`, `onMarkerClick`, `baseImageWidth`, `baseImageHeight` props
+A single absolutely-positioned DOM tooltip rendered **outside** the Canvas in `InteractiveMap.tsx`. It projects the active marker's world position to screen coordinates each frame and positions itself accordingly. Zero Drei, zero `<Html>`.
+
+**Props:**
+```ts
+interface MarkerTooltipProps {
+  marker: MapMarker | null;
+  worldX: number;
+  worldY: number;
+  markerZPosition: number;
+  containerRef: RefObject<HTMLDivElement>;
+  canvasRef: RefObject<HTMLCanvasElement>;
+}
+```
+
+**How it works:**
+
+1. **Render a single tooltip div** absolutely positioned inside the map container. Hidden when `marker` is null.
+
+2. **Project world position to screen coordinates** using a `requestAnimationFrame` loop:
+   ```ts
+   const tooltipRef = useRef<HTMLDivElement>(null);
+
+   useEffect(() => {
+     if (!marker) return;
+     let frameId = 0;
+
+     const update = () => {
+       const canvas = canvasRef.current;
+       const tooltip = tooltipRef.current;
+       const container = containerRef.current;
+       if (!canvas || !tooltip || !container) {
+         frameId = requestAnimationFrame(update);
+         return;
+       }
+
+       // Read camera state from the canvas's R3F store
+       // We need the camera from R3F. Options:
+       //   a) Pass camera via a ref from MapScene
+       //   b) Use the viewport ref that InteractiveMap already maintains
+       // Option (b) is simpler — use viewportRef + baseFrustumHalfWidth/Height
+
+       const viewport = viewportRef.current;
+       const zoom = Math.max(0.001, viewport.zoom);
+       const halfW = baseFrustumHalfWidth / zoom;
+       const halfH = baseFrustumHalfHeight / zoom;
+
+       const ndcX = (worldX - viewport.x) / halfW;
+       const ndcY = (worldY - viewport.y) / halfH;
+
+       const rect = container.getBoundingClientRect();
+       const screenX = (ndcX * 0.5 + 0.5) * rect.width;
+       const screenY = (-ndcY * 0.5 + 0.5) * rect.height;
+
+       tooltip.style.transform = `translate(${screenX}px, ${screenY}px) translate(-50%, -100%) translateY(-12px)`;
+       tooltip.style.opacity = "1";
+
+       frameId = requestAnimationFrame(update);
+     };
+
+     frameId = requestAnimationFrame(update);
+     return () => cancelAnimationFrame(frameId);
+   }, [marker, worldX, worldY, ...]);
+   ```
+
+3. **Tooltip DOM structure:**
+   ```tsx
+   <div
+     ref={tooltipRef}
+     style={{
+       position: "absolute",
+       top: 0,
+       left: 0,
+       pointerEvents: "none",
+       opacity: 0,
+       transition: "opacity 150ms ease",
+       willChange: "transform",
+       zIndex: 10,
+     }}
+   >
+     {marker && (
+       <div style={{
+         background: "rgba(0, 0, 0, 0.8)",
+         color: "#fff",
+         fontSize: 12,
+         lineHeight: 1.2,
+         padding: "4px 8px",
+         borderRadius: 4,
+         whiteSpace: "nowrap",
+         maxWidth: 200,
+         overflow: "hidden",
+         textOverflow: "ellipsis",
+       }}>
+         {marker.label}
+         <div style={{
+           position: "absolute",
+           left: "50%",
+           top: "100%",
+           transform: "translateX(-50%)",
+           width: 0, height: 0,
+           borderLeft: "5px solid transparent",
+           borderRight: "5px solid transparent",
+           borderTop: "5px solid rgba(0, 0, 0, 0.8)",
+         }} />
+       </div>
+     )}
+   </div>
+   ```
+
+4. **Why this is better than Drei `<Html>`:**
+   - No frustum culling — tooltip is pure DOM, not tied to Three.js visibility
+   - No `overflow: hidden` clipping — tooltip floats freely above the container
+   - Stable during zoom animations — rAF reads viewport ref which is updated by CameraController
+   - Only one DOM element regardless of marker count
+   - `transition: "opacity 150ms ease"` gives a smooth show/hide without any React state churn
+
+**Updated props (to pass viewport info without R3F camera access):**
+```ts
+interface MarkerTooltipProps {
+  marker: MapMarker | null;
+  worldX: number;
+  worldY: number;
+  containerRef: RefObject<HTMLDivElement>;
+  viewportRef: RefObject<{ x: number; y: number; zoom: number }>;
+  baseFrustumHalfWidth: number;
+  baseFrustumHalfHeight: number;
+}
+```
+
+### 9c: Update `MapScene.tsx`
+
+- Accept `markers`, `onMarkerClick`, `onMarkerHoverChange`, `baseImageWidth`, `baseImageHeight` props
 - Render `<MarkerDot>` components for each marker after the layer meshes
 - Compute world coordinates from marker image-pixel coords using the same formula:
   ```ts
@@ -649,24 +750,45 @@ interface MarkerDotProps {
   worldY = baseImageHeight / 2 - marker.y
   ```
 - Set marker z-position to sit just above the base layer: `0.005` (between zIndex 0 and 1 in the `zIndex * 0.01` scheme)
+- Pass `onHoverChange` and `onClick` to each `<MarkerDot>`
 
-### 9c: Update `InteractiveMap.tsx`
+### 9d: Update `InteractiveMap.tsx`
 
-- Remove the `<MarkerLayer>` DOM overlay and all its wiring (`viewportRef` for markers, `markersById`, the overlay `<div>`)
+- Remove the `<MarkerLayer>` DOM overlay and all its wiring (`markersById` for MarkerLayer, the overlay `<div>`)
 - Remove `renderMarker` from destructured props
-- Pass `markers`, `onMarkerClick`, `baseSize.width`, `baseSize.height` down to `<MapScene>`
+- Add `hoveredMarkerId` state: `useState<string | null>(null)`
+- Compute `hoveredMarker` and its world coords from `hoveredMarkerId` + `markersById`:
+  ```ts
+  const hoveredMarker = hoveredMarkerId ? markersById.get(hoveredMarkerId) ?? null : null;
+  const hoveredWorldX = hoveredMarker ? hoveredMarker.x - baseSize.width / 2 : 0;
+  const hoveredWorldY = hoveredMarker ? baseSize.height / 2 - hoveredMarker.y : 0;
+  ```
+- Pass `markers`, `onMarkerClick`, `onMarkerHoverChange` down to `<MapScene>`
+- After the `<Canvas>`, render `<MarkerTooltip>`:
+  ```tsx
+  <MarkerTooltip
+    marker={hoveredMarker}
+    worldX={hoveredWorldX}
+    worldY={hoveredWorldY}
+    containerRef={containerRef}
+    viewportRef={viewportRef}
+    baseFrustumHalfWidth={halfWidth}
+    baseFrustumHalfHeight={halfHeight}
+  />
+  ```
 - Keep `focusTarget`, `onFocusComplete`, `onFocusInterrupted`, `resetZoomTrigger` — these still work through CameraController
+- Keep `viewportRef` — now used by both marker click (focus target) and tooltip positioning
 
-### 9d: Update `types/index.ts`
+### 9e: Update `types/index.ts`
 
 - Remove `renderMarker` from `InteractiveMapProps`
 - Keep everything else unchanged (`markers`, `onMarkerClick`, `resetZoomTrigger`, `MapMarker`)
 
-### 9e: Update `index.ts`
+### 9f: Update `index.ts`
 
-- Remove any export related to `DefaultMarker` if present (currently not exported, so likely no change)
+- No changes expected (DefaultMarker was never exported)
 
-### 9f: Delete old files
+### 9g: Delete old files
 
 - Delete `packages/interactive-map/src/components/MarkerLayer.tsx`
 - Delete `packages/interactive-map/src/components/DefaultMarker.tsx`
@@ -749,4 +871,5 @@ Duplicate the carousel mesh so the image tiles seamlessly. When a carousel anima
 - 2026-02-18: Added review fixes — 2 major (stale focusTarget on interruption, CSS transition vs useFrame conflict) and 1 minor (style tag cleanup).
 - 2026-02-18: Added Fix 3 (Critical) — replace Drei `<Html>` with custom DOM overlay to fix markers not loading and markers disappearing on zoom. Drei's internal frustum culling hides markers when their projected position is outside the camera frustum, which happens during zoom animation (zoom outruns pan) and for edge markers at initial load. Renumbered old Fix 3 to Fix 4.
 - 2026-02-18: Review Round 2 — Fixes 1-4 all implemented correctly. R3F "Div is not part of THREE namespace" error resolved by moving MarkerLayer outside Canvas. Added Fix 5 (Medium: marker centering offset), Fix 6 (Minor: duplicate markersById), Fix 7 (Minor: dead viewportRef in MapScene), Fix 8 (Minor: stabilize rAF loop). Fix 5 is the only one affecting visible behavior — markers appear ~7px off-position.
-- 2026-02-18: Review Round 3 — Fixes 5-8 all implemented correctly. Two new bugs found: tooltip clipped by overlay `overflow: hidden`, cloud layer edge visible on zoom reset. Decision: rewrite markers as in-canvas Three.js objects (Fix 9) — eliminates DOM overlay, MarkerLayer, DefaultMarker. Drop `renderMarker` prop. Markers become `<MarkerDot>` meshes with Drei `<Html>` tooltip mounted only on hover. Fix 10 (carousel tiling) kept as-is — already implemented.
+- 2026-02-18: Review Round 3 — Fixes 5-8 all implemented correctly. Two new bugs found: tooltip clipped by overlay `overflow: hidden`, cloud layer edge visible on zoom reset. Decision: rewrite markers as in-canvas Three.js objects (Fix 9) — eliminates DOM overlay, MarkerLayer, DefaultMarker. Drop `renderMarker` prop. Markers become `<MarkerDot>` meshes. Fix 10 (carousel tiling) kept as-is — already implemented.
+- 2026-02-18: Updated Fix 9 — replaced Drei `<Html>` tooltip with a single global DOM tooltip (`MarkerTooltip.tsx`). One absolute-positioned div outside Canvas, projects active marker world position to screen via rAF + viewportRef. Zero Drei dependency for markers. No frustum culling, no overflow clipping, stable during zoom animations.
