@@ -16,6 +16,8 @@ interface CameraControllerProps {
   focusTarget?: { x: number; y: number } | null;
   /** Called when the camera finishes animating to a focus target */
   onFocusComplete?: () => void;
+  /** Called when a focus animation is interrupted by user input */
+  onFocusInterrupted?: () => void;
   /** Increment to trigger a zoom reset to initialZoom. Pan position is preserved. */
   resetZoomTrigger?: number;
 }
@@ -85,6 +87,7 @@ export function CameraController({
   onViewportChange,
   focusTarget,
   onFocusComplete,
+  onFocusInterrupted,
   resetZoomTrigger,
 }: CameraControllerProps) {
   const { camera, size, gl } = useThree();
@@ -120,7 +123,12 @@ export function CameraController({
   });
 
   const interruptFocus = () => {
+    if (!isFocusing.current) {
+      return;
+    }
+
     isFocusing.current = false;
+    onFocusInterrupted?.();
   };
 
   const applyFrustumForZoom = (zoom: number) => {

@@ -29,6 +29,7 @@ export function InteractiveMap({
   resetZoomTrigger,
 }: InteractiveMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const markerOverlayRef = useRef<HTMLDivElement>(null);
   const baseLayer = useMemo(() => {
     if (layers.length === 0) {
       return null;
@@ -108,6 +109,7 @@ export function InteractiveMap({
       style={{
         width,
         height,
+        position: "relative",
         cursor: resolvedPanConfig.enabled ? "grab" : "default",
         touchAction: "none",
       }}
@@ -143,9 +145,22 @@ export function InteractiveMap({
             onMarkerClick={onMarkerClick}
             renderMarker={renderMarker}
             resetZoomTrigger={resetZoomTrigger}
+            markerOverlayRef={markerOverlayRef}
           />
         </Suspense>
       </Canvas>
+      <div
+        ref={markerOverlayRef}
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          pointerEvents: "none",
+          overflow: "hidden",
+        }}
+      />
     </div>
   );
 }

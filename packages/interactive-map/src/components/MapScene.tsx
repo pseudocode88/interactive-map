@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ReactNode, RefObject } from "react";
 import { useMemo, useRef, useState } from "react";
 import type {
   MapLayer,
@@ -29,6 +29,7 @@ interface MapSceneProps {
   focusTarget?: { x: number; y: number } | null;
   onFocusComplete?: () => void;
   resetZoomTrigger?: number;
+  markerOverlayRef: RefObject<HTMLDivElement | null>;
 }
 
 function toWorldCoordinates(marker: MapMarker, baseWidth: number, baseHeight: number) {
@@ -55,6 +56,7 @@ export function MapScene({
   focusTarget: externalFocusTarget,
   onFocusComplete,
   resetZoomTrigger,
+  markerOverlayRef,
 }: MapSceneProps) {
   const sortedLayers = useMemo(() => [...layers].sort((a, b) => a.zIndex - b.zIndex), [layers]);
   const markersById = useMemo(() => {
@@ -76,9 +78,15 @@ export function MapScene({
     setInternalFocusTarget(toWorldCoordinates(marker, baseWidth, baseHeight));
     onMarkerClick?.(markerId);
   };
+
   const focusTarget = externalFocusTarget ?? internalFocusTarget;
-  const handleFocusComplete = () => {
+
+  const clearInternalFocusTarget = () => {
     setInternalFocusTarget(null);
+  };
+
+  const handleFocusComplete = () => {
+    clearInternalFocusTarget();
     onFocusComplete?.();
   };
 
@@ -91,6 +99,7 @@ export function MapScene({
         zoomConfig={zoomConfig}
         focusTarget={focusTarget}
         onFocusComplete={handleFocusComplete}
+        onFocusInterrupted={clearInternalFocusTarget}
         resetZoomTrigger={resetZoomTrigger}
         onViewportChange={(viewport) => {
           viewportRef.current = viewport;
@@ -137,6 +146,8 @@ export function MapScene({
                 baseLayerZIndex={baseLayerZIndex}
                 onMarkerClick={handleMarkerClick}
                 renderMarker={renderMarker}
+                overlayContainer={markerOverlayRef}
+                viewportRef={viewportRef}
               />
             ) : null}
           </group>

@@ -9,13 +9,20 @@ interface DefaultMarkerProps {
 }
 
 const MARKER_STYLE_ID = "interactive-map-marker-styles";
+let markerStyleRefCount = 0;
 
-function ensureMarkerStyles() {
+function mountMarkerStyles() {
   if (typeof document === "undefined") {
     return;
   }
 
-  if (document.getElementById(MARKER_STYLE_ID)) {
+  markerStyleRefCount += 1;
+  if (markerStyleRefCount > 1) {
+    return;
+  }
+
+  const existing = document.getElementById(MARKER_STYLE_ID);
+  if (existing) {
     return;
   }
 
@@ -30,12 +37,29 @@ function ensureMarkerStyles() {
   document.head.appendChild(style);
 }
 
+function unmountMarkerStyles() {
+  if (typeof document === "undefined") {
+    return;
+  }
+
+  markerStyleRefCount = Math.max(0, markerStyleRefCount - 1);
+  if (markerStyleRefCount !== 0) {
+    return;
+  }
+
+  const style = document.getElementById(MARKER_STYLE_ID);
+  style?.remove();
+}
+
 export function DefaultMarker({ color, label, isHovered }: DefaultMarkerProps) {
   const [localHovered, setLocalHovered] = useState(false);
   const hovered = isHovered || localHovered;
 
   useEffect(() => {
-    ensureMarkerStyles();
+    mountMarkerStyles();
+    return () => {
+      unmountMarkerStyles();
+    };
   }, []);
 
   return (
