@@ -42,7 +42,7 @@ const layers = [
         speed: 40,
         easing: "ease-in-out" as const,
       },
-      { type: "fade" as const, minOpacity: 0.6, maxOpacity: 1, duration: 10 }
+      { type: "fade" as const, minOpacity: 0.8, maxOpacity: 1, duration: 10 }
     ],
   },
   {
@@ -108,7 +108,7 @@ export default function Home() {
             mode: "twinkle",
             maxCount: 40,
             color: "#FFD700",
-            size: 4,
+            size: 7,
             sizeVariance: 0.5,
             twinkleDuration: 2,
             twinkleDurationVariance: 0.6,
@@ -119,16 +119,17 @@ export default function Home() {
           {
             id: "embers",
             mode: "drift",
-            maxCount: 20,
-            color: "#fff",
-            size: 5,
+            maxCount: 40,
+            color: "#FFD700",
+            size: 7,
             sizeVariance: 0.4,
             driftDirection: { x: 0.1, y: 1 },
             driftDirectionVariance: 20,
             driftSpeed: 25,
             driftSpeedVariance: 0.3,
             driftDistance: 120,
-            region: { x: 0, y: 0, width: 1000, height: 400 },
+            regionMode: "container",
+            // region: { x: 0, y: 0, width: 1000, height: 400 },
             zIndex: 11,
             opacity: 0.8,
           },
@@ -140,7 +141,7 @@ export default function Home() {
         resetZoomTrigger={resetZoomTrigger}
         baseLayerId="base"
         panConfig={{ enabled: true, easingFactor: 0.15 }}
-        zoomConfig={{ enabled: true, minZoom: 1, maxZoom: 1.6, initialZoom: 1 }}
+        zoomConfig={{ enabled: true, minZoom: 1, maxZoom: 1.6, initialZoom: 1.1 }}
         parallaxConfig={{ intensity: 0.3, mode: "depth" }}
       />
 

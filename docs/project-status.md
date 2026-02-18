@@ -136,17 +136,23 @@
 - `FogEffect` component with parallax support (depth + drift modes)
 - `utils/fog.ts` for pure fog math (drift, opacity, scale)
 
+### Chunk 7b: Sparkling / Particle Effects
+**Status:** Done
+**Plan:** [chunk-7b-sparkling-particle-effects-2026-02-19.md](plans/done/chunk-7b-sparkling-particle-effects-2026-02-19.md)
+
+- Particle system with Three.js `Points` + `BufferGeometry` + custom `ShaderMaterial`
+- Two visual modes: twinkle (stationary fade in/out) and drift (move + fade)
+- Configurable sparkle regions or full map coverage
+- `regionMode: "container"` for viewport-relative particle spawning
+- Optional layer attachment (inherits position + parallax factor)
+- Color-based (circle) or texture-based (PNG) rendering
+- Per-particle alpha via custom shader, `AdditiveBlending` for glow
+- `utils/particles.ts` for pure particle lifecycle math
+- `ParticleEffect` component with parallax support (depth + drift modes)
+
 ---
 
 ## Remaining Chunks
-
-### Chunk 7b: Sparkling / Particle Effects
-**Status:** Not Started
-
-Scope:
-- Particle system with Three.js Points + BufferGeometry
-- Configurable sparkle regions, count, size, color, speed
-- Per-layer or global particle effects
 
 ### Chunk 7d: Custom Shader Support
 **Status:** Not Started
@@ -163,13 +169,14 @@ Scope:
 packages/interactive-map/src/
 ├── components/
 │   ├── InteractiveMap.tsx      # Public entry point
-│   ├── MapScene.tsx            # Scene container, sorts/renders layers + fog + sprites + markers
+│   ├── MapScene.tsx            # Scene container, sorts/renders layers + fog + particles + sprites + markers
 │   ├── MapLayerMesh.tsx        # Individual layer rendering (sRGB, parallax)
 │   ├── CameraController.tsx    # Pan + zoom controls (cover-fit, baseLayerId aware)
 │   ├── MarkerDot.tsx           # Pulsing glow marker rendered on map
 │   ├── MarkerTooltip.tsx       # Hover tooltip for markers
 │   ├── SpriteEffect.tsx        # Animated sprite sheet effects (birds, butterflies, etc.)
-│   └── FogEffect.tsx           # Animated fog overlay with tiling, opacity pulse, scale breathing
+│   ├── FogEffect.tsx           # Animated fog overlay with tiling, opacity pulse, scale breathing
+│   └── ParticleEffect.tsx     # GPU particle system (twinkle/drift) with custom ShaderMaterial
 ├── hooks/
 │   ├── useBaseImageSize.ts     # Base image dimension detection
 │   └── useContainerSize.ts     # Container ResizeObserver
@@ -179,8 +186,9 @@ packages/interactive-map/src/
 │   ├── parallax.ts             # Parallax factor calculations (depth + drift modes)
 │   ├── spriteSheet.ts          # Sprite sheet grid detection + frame UV calculation
 │   ├── spriteInstances.ts      # Sprite instance lifecycle (spawn, update, despawn)
-│   └── fog.ts                  # Pure fog math (drift, opacity pulse, scale breathing)
+│   ├── fog.ts                  # Pure fog math (drift, opacity pulse, scale breathing)
+│   └── particles.ts            # Pure particle math (twinkle/drift lifecycle)
 ├── types/
-│   └── index.ts                # MapLayer, MapMarker, SpriteEffectConfig, FogEffectConfig, InteractiveMapProps, etc.
+│   └── index.ts                # MapLayer, MapMarker, SpriteEffectConfig, FogEffectConfig, ParticleEffectConfig, InteractiveMapProps, etc.
 └── index.ts                    # Barrel exports
 ```
