@@ -11,6 +11,7 @@ import { MapScene } from "./MapScene";
 
 export function InteractiveMap({
   layers,
+  baseLayerId,
   width = "100%",
   height = "100%",
   className,
@@ -23,8 +24,19 @@ export function InteractiveMap({
       return null;
     }
 
+    if (baseLayerId) {
+      const found = layers.find((layer) => layer.id === baseLayerId);
+      if (found) {
+        return found;
+      }
+
+      console.warn(
+        `[InteractiveMap] baseLayerId "${baseLayerId}" not found in layers. Falling back to lowest zIndex.`
+      );
+    }
+
     return [...layers].sort((a, b) => a.zIndex - b.zIndex)[0];
-  }, [layers]);
+  }, [layers, baseLayerId]);
 
   const baseSize = useBaseImageSize(baseLayer?.src ?? "");
   const containerSize = useContainerSize(containerRef);
