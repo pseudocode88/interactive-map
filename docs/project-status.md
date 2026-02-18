@@ -117,14 +117,40 @@
 
 ## Remaining Chunks
 
-### Chunk 7: Particle & Shader Effects
+### Chunk 7a: Sprite Effects (Flying Birds, Butterflies, etc.)
 **Status:** Not Started
 
 Scope:
-- Sparkling effects (particle system with Points + BufferGeometry)
-- Fog (animated semi-transparent texture drift)
-- Flying birds / sprite sheet animation (frame-by-frame on a path)
-- Custom shader support for advanced visual effects
+- Generic sprite effect system (reusable for birds, butterflies, leaves, etc.)
+- Sprite sheet support with auto-detected grid layout
+- Procedural natural-looking flight paths (spawn at edge, fly across, despawn/respawn)
+- Configurable: maxCount, speed, speedVariance, direction, directionVariance, oscillation
+- Multiple independent sprite groups via array of configs
+- Parallax-aware (participates in parallax like regular layers)
+- Frame-by-frame sprite sheet animation
+
+### Chunk 7b: Sparkling / Particle Effects
+**Status:** Not Started
+
+Scope:
+- Particle system with Three.js Points + BufferGeometry
+- Configurable sparkle regions, count, size, color, speed
+- Per-layer or global particle effects
+
+### Chunk 7c: Fog Effects
+**Status:** Not Started
+
+Scope:
+- Animated semi-transparent texture drift
+- Localized or full-screen fog overlay
+- Parallax-aware fog layers
+
+### Chunk 7d: Custom Shader Support
+**Status:** Not Started
+
+Scope:
+- Escape hatch for advanced users to apply custom ShaderMaterial
+- Built-in shader presets (water ripple, heat haze, etc.)
 
 ---
 
