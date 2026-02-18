@@ -134,8 +134,8 @@ export interface InteractiveMapProps {
   /** Called when a marker is clicked. Receives the marker ID. */
   onMarkerClick?: (markerId: string) => void;
   /**
-   * Increment this number to trigger a zoom reset (zooms out to initialZoom).
-   * Pan position is preserved. E.g. set to Date.now() or a counter.
+   * Increment this number to reset viewport to initial load state
+   * (initialZoom and centered pan). E.g. set to Date.now() or a counter.
    */
   resetZoomTrigger?: number;
 }

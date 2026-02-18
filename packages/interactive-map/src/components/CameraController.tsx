@@ -18,7 +18,7 @@ interface CameraControllerProps {
   onFocusComplete?: () => void;
   /** Called when a focus animation is interrupted by user input */
   onFocusInterrupted?: () => void;
-  /** Increment to trigger a zoom reset to initialZoom. Pan position is preserved. */
+  /** Increment to reset viewport to initial load state (initialZoom and centered pan). */
   resetZoomTrigger?: number;
 }
 
@@ -203,6 +203,7 @@ export function CameraController({
 
     previousResetTrigger.current = resetZoomTrigger;
     targetZoom.current = zoomConfig.initialZoom;
+    targetPosition.current = { x: 0, y: 0 };
     interruptFocus();
   }, [resetZoomTrigger, zoomConfig.initialZoom]);
 
