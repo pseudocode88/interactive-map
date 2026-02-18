@@ -3,6 +3,7 @@
 import { Html } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { AdditiveBlending } from "three";
 import type { Group, Mesh, MeshBasicMaterial } from "three";
 
 import type { MapMarker } from "../types";
@@ -20,6 +21,8 @@ const TOOLTIP_OFFSET = MARKER_RADIUS * 2;
 const DOT_PULSE_DURATION_SECONDS = 1.5;
 const DOT_PULSE_MIN_SCALE = 0.88;
 const DOT_PULSE_MAX_SCALE = 1.2;
+const HALO_BASE_SCALE = 1.45;
+const HALO_BASE_OPACITY = 0.32;
 
 export function MarkerDot({
   marker,
@@ -29,7 +32,9 @@ export function MarkerDot({
   onClick,
 }: MarkerDotProps) {
   const dotRef = useRef<Mesh>(null);
+  const haloRef = useRef<Mesh>(null);
   const pulseRef = useRef<Mesh>(null);
+  const haloMaterialRef = useRef<MeshBasicMaterial>(null);
   const pulseMaterialRef = useRef<MeshBasicMaterial>(null);
   const tooltipGroupRef = useRef<Group>(null);
   const currentScale = useRef(1);
@@ -56,9 +61,11 @@ export function MarkerDot({
 
   useFrame((state) => {
     const dot = dotRef.current;
+    const halo = haloRef.current;
     const pulse = pulseRef.current;
+    const haloMaterial = haloMaterialRef.current;
     const pulseMaterial = pulseMaterialRef.current;
-    if (!dot || !pulse || !pulseMaterial) {
+    if (!dot || !halo || !pulse || !haloMaterial || !pulseMaterial) {
       return;
     }
 
@@ -75,9 +82,13 @@ export function MarkerDot({
     currentScale.current += (targetScale - currentScale.current) * 0.2;
     dot.scale.setScalar(currentScale.current);
 
+    const haloScale = (HALO_BASE_SCALE * (isHovered ? 1.12 : 1)) / zoom;
+    halo.scale.setScalar(haloScale);
+    haloMaterial.opacity = isHovered ? HALO_BASE_OPACITY + 0.14 : HALO_BASE_OPACITY;
+
     const pulseElapsed = (state.clock.getElapsedTime() % 1.5) / 1.5;
-    const pulseScale = (1 + pulseElapsed) / zoom;
-    const pulseOpacity = 0.6 * (1 - pulseElapsed);
+    const pulseScale = (1.25 + pulseElapsed * 1.35) / zoom;
+    const pulseOpacity = 0.9 * (1 - pulseElapsed);
     pulse.scale.setScalar(pulseScale);
     pulseMaterial.opacity = pulseOpacity;
     if (tooltipGroupRef.current) {
@@ -114,14 +125,27 @@ export function MarkerDot({
         <meshBasicMaterial color={color} />
       </mesh>
 
+      <mesh ref={haloRef} position={[0, 0, -0.0015]} raycast={() => null}>
+        <circleGeometry args={[MARKER_RADIUS, 32]} />
+        <meshBasicMaterial
+          ref={haloMaterialRef}
+          color="#ffffff"
+          transparent
+          opacity={HALO_BASE_OPACITY}
+          depthWrite={false}
+          blending={AdditiveBlending}
+        />
+      </mesh>
+
       <mesh ref={pulseRef} position={[0, 0, -0.001]} raycast={() => null}>
         <circleGeometry args={[MARKER_RADIUS, 32]} />
         <meshBasicMaterial
           ref={pulseMaterialRef}
           color="#ffffff"
           transparent
-          opacity={0.6}
+          opacity={0.9}
           depthWrite={false}
+          blending={AdditiveBlending}
         />
       </mesh>
 
