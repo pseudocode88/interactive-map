@@ -1,4 +1,4 @@
-import type { MapLayer, PanConfig } from "../types";
+import type { MapLayer, PanConfig, ZoomConfig } from "../types";
 import { CameraController } from "./CameraController";
 import { MapLayerMesh } from "./MapLayerMesh";
 
@@ -7,6 +7,7 @@ interface MapSceneProps {
   baseWidth: number;
   baseHeight: number;
   panConfig: Required<PanConfig>;
+  zoomConfig: Required<ZoomConfig>;
 }
 
 export function MapScene({
@@ -14,6 +15,7 @@ export function MapScene({
   baseWidth,
   baseHeight,
   panConfig,
+  zoomConfig,
 }: MapSceneProps) {
   const sortedLayers = [...layers].sort((a, b) => a.zIndex - b.zIndex);
 
@@ -23,6 +25,7 @@ export function MapScene({
         baseWidth={baseWidth}
         baseHeight={baseHeight}
         panConfig={panConfig}
+        zoomConfig={zoomConfig}
       />
       {sortedLayers.map((layer) => (
         <MapLayerMesh

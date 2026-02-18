@@ -16,6 +16,7 @@ export default function Home() {
       <InteractiveMap
         layers={layers}
         panConfig={{ enabled: true, easingFactor: 0.15 }}
+        zoomConfig={{ enabled: true, minZoom: 1, maxZoom: 3 }}
       />
     </main>
   );

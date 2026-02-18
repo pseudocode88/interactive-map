@@ -13,10 +13,20 @@ export interface PanConfig {
   easingFactor?: number;
 }
 
+export interface ZoomConfig {
+  enabled?: boolean;
+  minZoom?: number;
+  maxZoom?: number;
+  initialZoom?: number;
+  scrollSpeed?: number;
+  easingFactor?: number;
+}
+
 export interface InteractiveMapProps {
   layers: MapLayer[];
   width?: string;
   height?: string;
   className?: string;
   panConfig?: PanConfig;
+  zoomConfig?: ZoomConfig;
 }

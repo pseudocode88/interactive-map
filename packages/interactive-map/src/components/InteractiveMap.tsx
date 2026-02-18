@@ -3,7 +3,7 @@
 import { Canvas } from "@react-three/fiber";
 import { Suspense, useMemo, useRef } from "react";
 
-import type { InteractiveMapProps, PanConfig } from "../types";
+import type { InteractiveMapProps, PanConfig, ZoomConfig } from "../types";
 import { useBaseImageSize } from "../hooks/useBaseImageSize";
 import { useContainerSize } from "../hooks/useContainerSize";
 import { MapScene } from "./MapScene";
@@ -14,6 +14,7 @@ export function InteractiveMap({
   height = "100%",
   className,
   panConfig,
+  zoomConfig,
 }: InteractiveMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const baseLayer = useMemo(() => {
@@ -41,6 +42,20 @@ export function InteractiveMap({
   const resolvedPanConfig: Required<PanConfig> = {
     enabled: panConfig?.enabled ?? true,
     easingFactor: panConfig?.easingFactor ?? 0.15,
+  };
+  const resolvedMinZoom = zoomConfig?.minZoom ?? 1;
+  const resolvedMaxZoom = Math.max(zoomConfig?.maxZoom ?? 3, resolvedMinZoom);
+  const resolvedInitialZoom = Math.min(
+    resolvedMaxZoom,
+    Math.max(zoomConfig?.initialZoom ?? 1, resolvedMinZoom)
+  );
+  const resolvedZoomConfig: Required<ZoomConfig> = {
+    enabled: zoomConfig?.enabled ?? true,
+    minZoom: resolvedMinZoom,
+    maxZoom: resolvedMaxZoom,
+    initialZoom: resolvedInitialZoom,
+    scrollSpeed: zoomConfig?.scrollSpeed ?? 0.001,
+    easingFactor: zoomConfig?.easingFactor ?? 0.15,
   };
 
   const halfWidth = baseSize.width / 2;
@@ -77,6 +92,7 @@ export function InteractiveMap({
             baseWidth={baseSize.width}
             baseHeight={baseSize.height}
             panConfig={resolvedPanConfig}
+            zoomConfig={resolvedZoomConfig}
           />
         </Suspense>
       </Canvas>
