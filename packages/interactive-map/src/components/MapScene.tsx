@@ -1,5 +1,5 @@
 import type { RefObject } from "react";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import type {
   MapLayer,
   MapMarker,
@@ -55,6 +55,10 @@ export function MapScene({
   resetZoomTrigger,
   onViewportChange,
 }: MapSceneProps) {
+  const stableHoverChange = useCallback(
+    (markerId: string | null) => onMarkerHoverChange?.(markerId),
+    [onMarkerHoverChange]
+  );
   const sortedLayers = useMemo(() => [...layers].sort((a, b) => a.zIndex - b.zIndex), [layers]);
   const markerZPosition = useMemo(() => {
     if (layers.length === 0) {
@@ -124,7 +128,7 @@ export function MapScene({
             worldX={worldX}
             worldY={worldY}
             zPosition={markerZPosition}
-            onHoverChange={onMarkerHoverChange ?? (() => undefined)}
+            onHoverChange={stableHoverChange}
             onClick={() => onMarkerClick?.(marker.id)}
           />
         );
