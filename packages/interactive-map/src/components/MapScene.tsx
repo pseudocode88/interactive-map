@@ -1,9 +1,6 @@
 import { useRef } from "react";
 import type { MapLayer, PanConfig, ParallaxConfig, ZoomConfig } from "../types";
-import {
-  computeAutoScaleFactor,
-  computeParallaxFactor,
-} from "../utils/parallax";
+import { computeParallaxFactor } from "../utils/parallax";
 import { CameraController } from "./CameraController";
 import { MapLayerMesh } from "./MapLayerMesh";
 
@@ -61,19 +58,6 @@ export function MapScene({
                 baseLayerZIndex,
                 parallaxConfig.intensity
               );
-        const autoScale =
-          !parallaxConfig || parallaxFactor === 1
-            ? 1
-            : computeAutoScaleFactor(
-                parallaxFactor,
-                zoomConfig.maxZoom,
-                zoomConfig.minZoom,
-                parallaxConfig.mode,
-                baseWidth,
-                baseHeight,
-                baseFrustumHalfWidth,
-                baseFrustumHalfHeight
-              );
 
         return (
           <MapLayerMesh
@@ -84,9 +68,12 @@ export function MapScene({
             animation={animation}
             baseWidth={baseWidth}
             baseHeight={baseHeight}
+            baseFrustumHalfWidth={baseFrustumHalfWidth}
+            baseFrustumHalfHeight={baseFrustumHalfHeight}
+            minZoom={zoomConfig.minZoom}
+            maxZoom={zoomConfig.maxZoom}
             parallaxFactor={parallaxFactor}
             parallaxMode={parallaxConfig?.mode}
-            autoScale={autoScale}
             viewportRef={viewportRef}
           />
         );

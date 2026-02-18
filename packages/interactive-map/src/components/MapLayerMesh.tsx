@@ -5,7 +5,10 @@ import { LinearFilter, Mesh, SRGBColorSpace, TextureLoader } from "three";
 import type { LayerAnimation } from "../types";
 import { computeAnimations } from "../utils/animation";
 import { resolveEasing } from "../utils/easing";
-import { computeParallaxScale } from "../utils/parallax";
+import {
+  computeAutoScaleFactor,
+  computeParallaxScale,
+} from "../utils/parallax";
 
 interface MapLayerMeshProps {
   src: string;
@@ -17,9 +20,12 @@ interface MapLayerMeshProps {
   animation?: LayerAnimation[];
   baseWidth: number;
   baseHeight: number;
+  baseFrustumHalfWidth: number;
+  baseFrustumHalfHeight: number;
+  minZoom: number;
+  maxZoom: number;
   parallaxFactor?: number;
   parallaxMode?: "depth" | "drift";
-  autoScale?: number;
   viewportRef?: RefObject<{ x: number; y: number; zoom: number }>;
 }
 
@@ -30,14 +36,48 @@ export function MapLayerMesh({
   animation,
   baseWidth,
   baseHeight,
+  baseFrustumHalfWidth,
+  baseFrustumHalfHeight,
+  minZoom,
+  maxZoom,
   parallaxFactor = 1,
   parallaxMode = "depth",
-  autoScale = 1,
   viewportRef,
 }: MapLayerMeshProps) {
   const texture = useLoader(TextureLoader, src);
   const meshRef = useRef<Mesh>(null);
   const elapsed = useRef(0);
+  const textureWidth = texture.image.width;
+  const textureHeight = texture.image.height;
+  const autoScale = useMemo(() => {
+    if (parallaxFactor === 1) {
+      return 1;
+    }
+
+    return computeAutoScaleFactor(
+      parallaxFactor,
+      maxZoom,
+      minZoom,
+      parallaxMode,
+      baseWidth,
+      baseHeight,
+      textureWidth,
+      textureHeight,
+      baseFrustumHalfWidth,
+      baseFrustumHalfHeight
+    );
+  }, [
+    baseFrustumHalfHeight,
+    baseFrustumHalfWidth,
+    baseHeight,
+    baseWidth,
+    maxZoom,
+    minZoom,
+    parallaxFactor,
+    parallaxMode,
+    textureHeight,
+    textureWidth,
+  ]);
 
   const processedTexture = useMemo(() => {
     const safeAutoScale = Math.max(1, autoScale);
@@ -61,8 +101,6 @@ export function MapLayerMesh({
     [animation]
   );
 
-  const textureWidth = texture.image.width;
-  const textureHeight = texture.image.height;
   const safeAutoScale = Math.max(1, autoScale);
   const geoWidth = textureWidth * safeAutoScale;
   const geoHeight = textureHeight * safeAutoScale;

@@ -34,6 +34,8 @@ export function computeAutoScaleFactor(
   mode: ParallaxConfig["mode"] | undefined,
   baseWidth: number,
   baseHeight: number,
+  layerWidth: number,
+  layerHeight: number,
   baseFrustumHalfWidth: number,
   baseFrustumHalfHeight: number
 ): number {
@@ -56,5 +58,5 @@ export function computeAutoScaleFactor(
   const requiredWidth = visibleWidthForLayer + panOffsetX * 2;
   const requiredHeight = visibleHeightForLayer + panOffsetY * 2;
 
-  return Math.max(1, requiredWidth / baseWidth, requiredHeight / baseHeight);
+  return Math.max(1, requiredWidth / layerWidth, requiredHeight / layerHeight);
 }
