@@ -23,6 +23,10 @@ export function InteractiveMap({
   panConfig,
   zoomConfig,
   parallaxConfig,
+  markers,
+  onMarkerClick,
+  renderMarker,
+  resetZoomTrigger,
 }: InteractiveMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const baseLayer = useMemo(() => {
@@ -135,6 +139,10 @@ export function InteractiveMap({
             panConfig={resolvedPanConfig}
             zoomConfig={resolvedZoomConfig}
             parallaxConfig={resolvedParallaxConfig}
+            markers={markers}
+            onMarkerClick={onMarkerClick}
+            renderMarker={renderMarker}
+            resetZoomTrigger={resetZoomTrigger}
           />
         </Suspense>
       </Canvas>
