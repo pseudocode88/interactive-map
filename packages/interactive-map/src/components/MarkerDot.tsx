@@ -38,7 +38,7 @@ export function MarkerDot({
   const pulseMaterialRef = useRef<MeshBasicMaterial>(null);
   const currentScale = useRef(1);
   const isHoveredRef = useRef(false);
-  const color = marker.color ?? "#e5e5e5";
+  const color = marker.color ?? "#FFC857";
 
   useFrame((state) => {
     const dot = dotRef.current;
