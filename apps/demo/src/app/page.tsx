@@ -116,10 +116,14 @@ export default function Home() {
         }}
       >
         <span>Selected Marker: {selectedLabel}</span>
+        <span style={{ opacity: 0.85 }}>Hover marker to see tooltip</span>
         <span style={{ opacity: 0.85 }}>Click marker to focus</span>
         <button
           type="button"
-          onClick={() => setResetZoomTrigger((value) => value + 1)}
+          onClick={() => {
+            setSelectedMarkerId(null);
+            setResetZoomTrigger((value) => value + 1);
+          }}
           style={{
             border: "none",
             borderRadius: 6,
