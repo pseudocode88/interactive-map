@@ -106,6 +106,9 @@ export function MarkerDot({
     <group position={[worldX, worldY, zPosition]}>
       <mesh
         ref={dotRef}
+        onPointerDown={(event) => {
+          event.stopPropagation();
+        }}
         onClick={(event) => {
           event.stopPropagation();
           onClick();
