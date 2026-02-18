@@ -54,6 +54,14 @@ export function MapScene({
   onViewportChange,
 }: MapSceneProps) {
   const sortedLayers = useMemo(() => [...layers].sort((a, b) => a.zIndex - b.zIndex), [layers]);
+  const markerZPosition = useMemo(() => {
+    if (layers.length === 0) {
+      return 0.01;
+    }
+
+    const maxLayerZIndex = Math.max(...layers.map((layer) => layer.zIndex));
+    return maxLayerZIndex * 0.01 + 0.01;
+  }, [layers]);
 
   return (
     <>
@@ -113,7 +121,7 @@ export function MapScene({
             marker={marker}
             worldX={worldX}
             worldY={worldY}
-            zPosition={0.005}
+            zPosition={markerZPosition}
             onClick={() => onMarkerClick?.(marker.id)}
           />
         );
