@@ -11,7 +11,7 @@ const layers = [
     animation: [
       {
         type: "wobble" as const,
-        offset: { x: 0, y: 50 },
+        offset: { x: 0, y: 1 },
         duration: 10,
       },
     ],
@@ -21,44 +21,42 @@ const layers = [
     id: "cloud-front",
     src: "/overlay.png",
     zIndex: 1,
-    position: { x: 0, y: -10 },
+    position: { x: 0, y: 0 },
     animation: [
       {
-        type: "bounce" as const,
-        direction: { x: 0, y: 10 },
-        amplitude: 15,
-        duration: 2,
-        easing: "ease-in-out" as const,
+        type: "wobble" as const,
+        offset: { x: 0, y: 0 },
+        duration: 10,
       },
       { type: "fade" as const, minOpacity: 0.4, maxOpacity: 1, duration: 3 },
     ],
   },
-  {
-    id: "cloud-slide-front",
-    src: "/cloud-slide-front.png",
-    zIndex: 4,
-    animation: [
-      {
-        type: "carousel" as const,
-        direction: { x: -1, y: 0 },
-        speed: 40,
-        easing: "ease-in-out" as const,
-      },
-    ],
-  },
-  {
-    id: "cloud-slide-front-2",
-    src: "/cloud-slide-front-2.png",
-    zIndex: 5,
-    animation: [
-      {
-        type: "carousel" as const,
-        direction: { x: -1, y: 0 },
-        speed: 10,
-        easing: "ease-in-out" as const,
-      },
-    ],
-  },
+  // {
+  //   id: "cloud-slide-front",
+  //   src: "/cloud-slide-front.png",
+  //   zIndex: 4,
+  //   animation: [
+  //     {
+  //       type: "carousel" as const,
+  //       direction: { x: -1, y: 0 },
+  //       speed: 40,
+  //       easing: "ease-in-out" as const,
+  //     },
+  //   ],
+  // },
+  // {
+  //   id: "cloud-slide-front-2",
+  //   src: "/cloud-slide-front-2.png",
+  //   zIndex: 5,
+  //   animation: [
+  //     {
+  //       type: "carousel" as const,
+  //       direction: { x: -1, y: 0 },
+  //       speed: 10,
+  //       easing: "ease-in-out" as const,
+  //     },
+  //   ],
+  // },
 ];
 
 const markers: MapMarker[] = [
@@ -104,7 +102,7 @@ export default function Home() {
         fogEffects={[
           {
             id: "mist",
-            src: "/overlay-cloud-back.png",
+            src: "/cloud-slide-front-2.png",
             speed: 15,
             direction: { x: 1, y: 0.2 },
             opacity: 0.4,
@@ -115,11 +113,30 @@ export default function Home() {
               easing: "ease-in-out",
             },
             scaleBreathing: {
-              amplitude: 0.08,
+              amplitude: 0.02,
               duration: 7,
               easing: "ease-in-out",
             },
-            zIndex: 9,
+            zIndex: 5,
+          },
+          {
+            id: "mist-2",
+            src: "/cloud-slide-front.png",
+            speed: 15,
+            direction: { x: 1, y: 0.2 },
+            opacity: 0.4,
+            opacityPulse: {
+              minOpacity: 0.5,
+              maxOpacity: 0.8,
+              duration: 5,
+              easing: "ease-in-out",
+            },
+            scaleBreathing: {
+              amplitude: 0.02,
+              duration: 7,
+              easing: "ease-in-out",
+            },
+            zIndex: 4,
           },
         ]}
         onMarkerClick={(markerId) => {
