@@ -3,7 +3,7 @@ Name: Chunk 6 - Map Markers & Interaction
 Type: Feature
 Created On: 2026-02-18
 Modified On: 2026-02-18
-Review Status: Fixes Required (Round 3)
+Review Status: Fixes Required (Round 3 — Rewrite)
 ---
 
 # Brief
@@ -541,32 +541,135 @@ Alternatively, if tooltip show/hide can tolerate being driven by the rAF loop (w
 
 # Review Round 3 Fixes
 
-## Fix 9: Tooltip clipped by overlay overflow (Medium)
+## Fix 9: Rewrite markers as in-canvas Three.js objects (Major — replaces Fix 3)
 
-**File:** `MarkerLayer.tsx`
+**Files to delete:** `MarkerLayer.tsx`, `DefaultMarker.tsx`
+**Files to create:** `MarkerDot.tsx`
+**Files to modify:** `InteractiveMap.tsx`, `MapScene.tsx`, `types/index.ts`, `index.ts`
 
-**Problem:** The marker overlay div uses `overflow: "hidden"` to clip off-screen markers. However, the tooltip is positioned above the marker with `bottom: 100%` and `translateY(-8px)`, which extends it beyond the marker wrapper's bounds. The overlay's `overflow: hidden` clips the tooltip, making it invisible on hover. This affects all markers, not just those near the top edge.
+**Problem:** The DOM overlay approach (Fix 3) introduced cascading issues: manual projection math, rAF sync loop, tooltip clipping from `overflow: hidden`, hover state complexity, and marker centering offsets. These stem from rendering HTML outside the Canvas and manually syncing it with the R3F camera.
 
-**Fix:**
+**Decision:** Move markers back inside the Canvas as native Three.js objects. Drop the `renderMarker` prop (custom React component support) in favor of a simpler color/size API.
 
-Change `overflow: "hidden"` to `overflow: "visible"` on the overlay container div:
+### 9a: Create `MarkerDot.tsx`
 
-```tsx
-<div
-  ref={overlayRef}
-  style={{
-    position: "absolute",
-    top: 0,
-    left: 0,
-    width: "100%",
-    height: "100%",
-    pointerEvents: "none",
-    overflow: "visible",  // was "hidden" — clipped tooltips
-  }}
->
+**File (new):** `packages/interactive-map/src/components/MarkerDot.tsx`
+
+A single marker rendered as a Three.js mesh inside the R3F scene. Each marker is a small circle with a glow pulse and a Drei `<Html>` tooltip shown only on hover.
+
+**Props:**
+```ts
+interface MarkerDotProps {
+  marker: MapMarker;
+  worldX: number;
+  worldY: number;
+  zPosition: number;
+  baseFrustumHalfWidth: number;
+  onClick: () => void;
+}
 ```
 
-**Why this is safe:** The overlay is `position: absolute` inside a container with explicit `width`/`height` and no scrollbars. Markers positioned off-screen via `translate()` will simply paint outside the visible area — the browser won't create scrollbars for absolutely-positioned children of a sized container. The parent container's own `overflow` (or lack of it) and the viewport naturally bound what's visible.
+**Marker dot rendering:**
+- Use a `<mesh>` with `<circleGeometry args={[7, 32]}/>` (7px radius, 32 segments) for the dot
+- Use `<meshBasicMaterial color={marker.color ?? "#ff4444"} />` for the fill
+- Position at `[worldX, worldY, zPosition]`
+
+**Zoom compensation (constant screen size):**
+- In `useFrame`, read the camera zoom from `camera.userData.interactiveMapZoom` (already written by CameraController)
+- Apply inverse scale: `meshRef.current.scale.setScalar(1 / zoom)`
+- This keeps the marker the same pixel size regardless of zoom level
+
+**Pulse/glow effect:**
+- Render a second `<mesh>` (the pulse ring) as a sibling, same position, slightly larger
+- In `useFrame`, animate its scale from 1x to 2x and opacity from 0.5 to 0 on a 1.5s cycle:
+  ```ts
+  const pulseElapsed = (elapsed % 1.5) / 1.5; // 0 → 1 over 1.5s
+  const pulseScale = 1 + pulseElapsed;
+  const pulseOpacity = 0.5 * (1 - pulseElapsed);
+  pulseRef.current.scale.setScalar(pulseScale / zoom);
+  pulseMaterial.opacity = pulseOpacity;
+  ```
+- The pulse ring uses the same color with `transparent: true`
+
+**Hover and click:**
+- Use R3F's native pointer events on the dot mesh: `onPointerEnter`, `onPointerLeave`, `onClick`
+- Track `isHovered` state locally with `useState`
+- On hover, scale the dot to 1.3x (multiply the zoom-compensated scale by 1.3) — apply via lerp in `useFrame` for smooth transition:
+  ```ts
+  const targetScale = (isHovered ? 1.3 : 1) / zoom;
+  currentScale.current += (targetScale - currentScale.current) * 0.2;
+  meshRef.current.scale.setScalar(currentScale.current);
+  ```
+- `onClick` calls the parent's `onMarkerClick(marker.id)`
+
+**Tooltip (Drei `<Html>`):**
+- **Only mount when hovered** — this avoids Drei's frustum culling bug because the camera is always near the marker when the user is hovering it
+- Render Drei `<Html center>` positioned slightly above the dot:
+  ```tsx
+  {isHovered && (
+    <Html center position={[0, 14 / zoom, 0]} style={{ pointerEvents: "none" }}>
+      <div style={{
+        background: "rgba(0,0,0,0.8)",
+        color: "#fff",
+        fontSize: 12,
+        padding: "4px 8px",
+        borderRadius: 4,
+        whiteSpace: "nowrap",
+        maxWidth: 200,
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+      }}>
+        {marker.label}
+        {/* Small triangle arrow pointing down */}
+        <div style={{
+          position: "absolute",
+          left: "50%",
+          top: "100%",
+          transform: "translateX(-50%)",
+          borderLeft: "5px solid transparent",
+          borderRight: "5px solid transparent",
+          borderTop: "5px solid rgba(0,0,0,0.8)",
+        }} />
+      </div>
+    </Html>
+  )}
+  ```
+- The `position` y-offset uses `14 / zoom` to keep tooltip distance consistent regardless of zoom
+- `pointerEvents: "none"` so the tooltip doesn't interfere with hover detection
+
+**Important:** Set `cursor: "pointer"` on the mesh wrapper or use R3F's `onPointerOver` to change the document cursor.
+
+### 9b: Update `MapScene.tsx`
+
+- Accept `markers`, `onMarkerClick`, `baseImageWidth`, `baseImageHeight` props
+- Render `<MarkerDot>` components for each marker after the layer meshes
+- Compute world coordinates from marker image-pixel coords using the same formula:
+  ```ts
+  worldX = marker.x - baseImageWidth / 2
+  worldY = baseImageHeight / 2 - marker.y
+  ```
+- Set marker z-position to sit just above the base layer: `0.005` (between zIndex 0 and 1 in the `zIndex * 0.01` scheme)
+
+### 9c: Update `InteractiveMap.tsx`
+
+- Remove the `<MarkerLayer>` DOM overlay and all its wiring (`viewportRef` for markers, `markersById`, the overlay `<div>`)
+- Remove `renderMarker` from destructured props
+- Pass `markers`, `onMarkerClick`, `baseSize.width`, `baseSize.height` down to `<MapScene>`
+- Keep `focusTarget`, `onFocusComplete`, `onFocusInterrupted`, `resetZoomTrigger` — these still work through CameraController
+
+### 9d: Update `types/index.ts`
+
+- Remove `renderMarker` from `InteractiveMapProps`
+- Keep everything else unchanged (`markers`, `onMarkerClick`, `resetZoomTrigger`, `MapMarker`)
+
+### 9e: Update `index.ts`
+
+- Remove any export related to `DefaultMarker` if present (currently not exported, so likely no change)
+
+### 9f: Delete old files
+
+- Delete `packages/interactive-map/src/components/MarkerLayer.tsx`
+- Delete `packages/interactive-map/src/components/DefaultMarker.tsx`
 
 ---
 
@@ -646,4 +749,4 @@ Duplicate the carousel mesh so the image tiles seamlessly. When a carousel anima
 - 2026-02-18: Added review fixes — 2 major (stale focusTarget on interruption, CSS transition vs useFrame conflict) and 1 minor (style tag cleanup).
 - 2026-02-18: Added Fix 3 (Critical) — replace Drei `<Html>` with custom DOM overlay to fix markers not loading and markers disappearing on zoom. Drei's internal frustum culling hides markers when their projected position is outside the camera frustum, which happens during zoom animation (zoom outruns pan) and for edge markers at initial load. Renumbered old Fix 3 to Fix 4.
 - 2026-02-18: Review Round 2 — Fixes 1-4 all implemented correctly. R3F "Div is not part of THREE namespace" error resolved by moving MarkerLayer outside Canvas. Added Fix 5 (Medium: marker centering offset), Fix 6 (Minor: duplicate markersById), Fix 7 (Minor: dead viewportRef in MapScene), Fix 8 (Minor: stabilize rAF loop). Fix 5 is the only one affecting visible behavior — markers appear ~7px off-position.
-- 2026-02-18: Review Round 3 — Fixes 5-8 all implemented correctly. Two new bugs found: Fix 9 (Medium: tooltip clipped by overlay `overflow: hidden`), Fix 10 (Medium: cloud layer edge visible on zoom reset — pre-existing carousel limitation, needs mesh duplication for seamless tiling).
+- 2026-02-18: Review Round 3 — Fixes 5-8 all implemented correctly. Two new bugs found: tooltip clipped by overlay `overflow: hidden`, cloud layer edge visible on zoom reset. Decision: rewrite markers as in-canvas Three.js objects (Fix 9) — eliminates DOM overlay, MarkerLayer, DefaultMarker. Drop `renderMarker` prop. Markers become `<MarkerDot>` meshes with Drei `<Html>` tooltip mounted only on hover. Fix 10 (carousel tiling) kept as-is — already implemented.
