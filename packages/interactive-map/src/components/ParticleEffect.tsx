@@ -25,11 +25,20 @@ interface ParticleEffectProps {
   config: ParticleEffectConfig;
   baseWidth: number;
   baseHeight: number;
+  baseFrustumHalfWidth: number;
+  baseFrustumHalfHeight: number;
   parallaxFactor: number;
   parallaxMode?: "depth" | "drift";
   viewportRef: RefObject<{ x: number; y: number; zoom: number }>;
   /** Offset from the attached layer's position (0,0 if no layer attachment) */
   layerOffset: { x: number; y: number };
+}
+
+interface ParticleRegion {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 }
 
 const VERTEX_SHADER = `
@@ -69,10 +78,66 @@ void main() {
 }
 `;
 
+function clampDimension(value: number): number {
+  return Math.max(1, value);
+}
+
+function wrapCoordinate(value: number, size: number): number {
+  if (size <= 0) {
+    return 0;
+  }
+
+  return ((value % size) + size) % size;
+}
+
+function resolveParticleRegion(
+  config: ParticleEffectConfig,
+  viewport: { x: number; y: number; zoom: number },
+  baseWidth: number,
+  baseHeight: number,
+  baseFrustumHalfWidth: number,
+  baseFrustumHalfHeight: number,
+  layerOffset: { x: number; y: number }
+): ParticleRegion {
+  if (config.regionMode === "container") {
+    const zoom = Math.max(0.001, viewport.zoom);
+    const visibleWidth = clampDimension((baseFrustumHalfWidth * 2) / zoom);
+    const visibleHeight = clampDimension((baseFrustumHalfHeight * 2) / zoom);
+
+    const leftWorld = viewport.x - visibleWidth / 2;
+    const topWorld = viewport.y + visibleHeight / 2;
+
+    return {
+      x: leftWorld + baseWidth / 2 - layerOffset.x,
+      y: baseHeight / 2 + layerOffset.y - topWorld,
+      width: visibleWidth,
+      height: visibleHeight,
+    };
+  }
+
+  if (config.region) {
+    return {
+      x: config.region.x,
+      y: config.region.y,
+      width: clampDimension(config.region.width),
+      height: clampDimension(config.region.height),
+    };
+  }
+
+  return {
+    x: 0,
+    y: 0,
+    width: clampDimension(baseWidth),
+    height: clampDimension(baseHeight),
+  };
+}
+
 export function ParticleEffect({
   config,
   baseWidth,
   baseHeight,
+  baseFrustumHalfWidth,
+  baseFrustumHalfHeight,
   parallaxFactor,
   parallaxMode,
   viewportRef,
@@ -90,17 +155,6 @@ export function ParticleEffect({
   const mode = config.mode ?? "twinkle";
   const zIndex = config.zIndex ?? 11;
   const opacity = config.opacity ?? 1;
-
-  const region = useMemo(
-    () =>
-      config.region ?? {
-        x: 0,
-        y: 0,
-        width: baseWidth,
-        height: baseHeight,
-      },
-    [baseHeight, baseWidth, config.region]
-  );
 
   useEffect(() => {
     if (!config.src) {
@@ -148,17 +202,33 @@ export function ParticleEffect({
   const sizeArray = useMemo(() => new Float32Array(maxCount), [maxCount]);
 
   useEffect(() => {
+    const viewport = viewportRef.current ?? { x: 0, y: 0, zoom: 1 };
+    const initialRegion = resolveParticleRegion(
+      config,
+      viewport,
+      baseWidth,
+      baseHeight,
+      baseFrustumHalfWidth,
+      baseFrustumHalfHeight,
+      layerOffset
+    );
+
     particlesRef.current = initializeParticles(
       config,
-      region.width,
-      region.height,
+      initialRegion.width,
+      initialRegion.height,
       maxCount
     );
   }, [
+    baseFrustumHalfHeight,
+    baseFrustumHalfWidth,
+    baseHeight,
+    baseWidth,
     config,
-    region.height,
-    region.width,
+    layerOffset.x,
+    layerOffset.y,
     maxCount,
+    viewportRef,
   ]);
 
   const uniforms = useMemo(() => {
@@ -182,6 +252,15 @@ export function ParticleEffect({
     const cappedDelta = Math.min(delta, 0.1);
     const particles = particlesRef.current;
     const viewport = viewportRef.current ?? { x: 0, y: 0, zoom: 1 };
+    const region = resolveParticleRegion(
+      config,
+      viewport,
+      baseWidth,
+      baseHeight,
+      baseFrustumHalfWidth,
+      baseFrustumHalfHeight,
+      layerOffset
+    );
 
     if (materialRef.current) {
       materialRef.current.uniforms.uOpacity.value = opacity;
@@ -203,6 +282,9 @@ export function ParticleEffect({
       } else {
         updateTwinkleParticle(particle, cappedDelta, region.width, region.height);
       }
+
+      particle.x = wrapCoordinate(particle.x, region.width);
+      particle.y = wrapCoordinate(particle.y, region.height);
 
       const worldX = region.x + particle.x - baseWidth / 2 + layerOffset.x;
       const worldY = baseHeight / 2 - (region.y + particle.y) + layerOffset.y;

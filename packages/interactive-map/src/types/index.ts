@@ -238,6 +238,12 @@ export interface ParticleEffectConfig {
     height: number;
   };
   /**
+   * Region coordinate mode:
+   * - 'map': use map pixel coordinates (default).
+   * - 'container': use current visible container/viewport bounds (full width + height of the view).
+   */
+  regionMode?: "map" | "container";
+  /**
    * Optional layer ID to attach this particle effect to.
    * When set, particles inherit the layer's base position offset and parallax factor.
    * The region (if provided) is relative to the layer's position.
