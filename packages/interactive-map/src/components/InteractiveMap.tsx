@@ -155,6 +155,7 @@ export function InteractiveMap({
             panConfig={resolvedPanConfig}
             zoomConfig={resolvedZoomConfig}
             parallaxConfig={resolvedParallaxConfig}
+            viewportRef={viewportRef}
             focusTarget={focusTarget}
             onFocusComplete={() => setFocusTarget(null)}
             onFocusInterrupted={() => setFocusTarget(null)}
@@ -168,6 +169,7 @@ export function InteractiveMap({
       {markers && markers.length > 0 ? (
         <MarkerLayer
           markers={markers}
+          markersById={markersById}
           baseImageWidth={baseSize.width}
           baseImageHeight={baseSize.height}
           baseFrustumHalfWidth={halfWidth}

@@ -1,4 +1,5 @@
-import { useMemo, useRef } from "react";
+import type { RefObject } from "react";
+import { useMemo } from "react";
 import type {
   MapLayer,
   PanConfig,
@@ -20,6 +21,7 @@ interface MapSceneProps {
   panConfig: Required<PanConfig>;
   zoomConfig: Required<ZoomConfig>;
   parallaxConfig?: Required<ParallaxConfig>;
+  viewportRef: RefObject<{ x: number; y: number; zoom: number }>;
   focusTarget?: { x: number; y: number } | null;
   onFocusComplete?: () => void;
   onFocusInterrupted?: () => void;
@@ -38,6 +40,7 @@ export function MapScene({
   panConfig,
   zoomConfig,
   parallaxConfig,
+  viewportRef,
   focusTarget,
   onFocusComplete,
   onFocusInterrupted,
@@ -45,7 +48,6 @@ export function MapScene({
   onViewportChange,
 }: MapSceneProps) {
   const sortedLayers = useMemo(() => [...layers].sort((a, b) => a.zIndex - b.zIndex), [layers]);
-  const viewportRef = useRef({ x: 0, y: 0, zoom: zoomConfig.initialZoom });
 
   return (
     <>
@@ -58,10 +60,7 @@ export function MapScene({
         onFocusComplete={onFocusComplete}
         onFocusInterrupted={onFocusInterrupted}
         resetZoomTrigger={resetZoomTrigger}
-        onViewportChange={(viewport) => {
-          viewportRef.current = viewport;
-          onViewportChange?.(viewport);
-        }}
+        onViewportChange={(viewport) => onViewportChange?.(viewport)}
       />
       {sortedLayers.map((layer) => {
         const animation = layer.animation

@@ -1,13 +1,14 @@
 "use client";
 
 import type { ReactNode, RefObject } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { MapMarker } from "../types";
 import { DefaultMarker } from "./DefaultMarker";
 
 interface MarkerLayerProps {
   markers: MapMarker[];
+  markersById: Map<string, MapMarker>;
   baseImageWidth: number;
   baseImageHeight: number;
   baseFrustumHalfWidth: number;
@@ -26,6 +27,7 @@ function toWorldPosition(marker: MapMarker, baseImageWidth: number, baseImageHei
 
 export function MarkerLayer({
   markers,
+  markersById,
   baseImageWidth,
   baseImageHeight,
   baseFrustumHalfWidth,
@@ -37,11 +39,8 @@ export function MarkerLayer({
   const overlayRef = useRef<HTMLDivElement>(null);
   const markerRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const hoverScaleRefs = useRef<Map<string, number>>(new Map());
-  const [hoveredMarkers, setHoveredMarkers] = useState<Record<string, boolean>>({});
-
-  const markersById = useMemo(() => {
-    return new Map(markers.map((marker) => [marker.id, marker]));
-  }, [markers]);
+  const hoveredMarkersRef = useRef<Record<string, boolean>>({});
+  const [hoveredMarkerId, setHoveredMarkerId] = useState<string | null>(null);
 
   useEffect(() => {
     let frameId = 0;
@@ -81,12 +80,12 @@ export function MarkerLayer({
         const screenY = (-ndcY * 0.5 + 0.5) * height;
 
         const currentHoverScale = hoverScaleRefs.current.get(markerId) ?? 1;
-        const targetHoverScale = renderMarker && hoveredMarkers[markerId] ? 1.3 : 1;
+        const targetHoverScale = renderMarker && hoveredMarkersRef.current[markerId] ? 1.3 : 1;
         const nextHoverScale =
           currentHoverScale + (targetHoverScale - currentHoverScale) * 0.2;
 
         hoverScaleRefs.current.set(markerId, nextHoverScale);
-        element.style.transform = `translate(${screenX}px, ${screenY}px) scale(${nextHoverScale / zoom})`;
+        element.style.transform = `translate(${screenX}px, ${screenY}px) translate(-50%, -50%) scale(${nextHoverScale / zoom})`;
       });
 
       frameId = requestAnimationFrame(updateTransforms);
@@ -99,7 +98,6 @@ export function MarkerLayer({
     baseFrustumHalfWidth,
     baseImageHeight,
     baseImageWidth,
-    hoveredMarkers,
     markersById,
     renderMarker,
     viewportRef,
@@ -113,6 +111,8 @@ export function MarkerLayer({
 
     markerRefs.current.delete(markerId);
     hoverScaleRefs.current.delete(markerId);
+    delete hoveredMarkersRef.current[markerId];
+    setHoveredMarkerId((previous) => (previous === markerId ? null : previous));
   };
 
   return (
@@ -130,7 +130,7 @@ export function MarkerLayer({
     >
       {markers.map((marker) => {
         const markerColor = marker.color ?? "#ff4444";
-        const isHovered = hoveredMarkers[marker.id] ?? false;
+        const isHovered = hoveredMarkerId === marker.id;
 
         return (
           <div
@@ -142,10 +142,12 @@ export function MarkerLayer({
             }}
             onPointerDown={(event) => event.stopPropagation()}
             onPointerEnter={() => {
-              setHoveredMarkers((previous) => ({ ...previous, [marker.id]: true }));
+              hoveredMarkersRef.current[marker.id] = true;
+              setHoveredMarkerId(marker.id);
             }}
             onPointerLeave={() => {
-              setHoveredMarkers((previous) => ({ ...previous, [marker.id]: false }));
+              hoveredMarkersRef.current[marker.id] = false;
+              setHoveredMarkerId((previous) => (previous === marker.id ? null : previous));
             }}
             style={{
               position: "absolute",
@@ -154,7 +156,7 @@ export function MarkerLayer({
               pointerEvents: "auto",
               cursor: "pointer",
               willChange: "transform",
-              transform: "translate(0px, 0px) scale(1)",
+              transform: "translate(0px, 0px) translate(-50%, -50%) scale(1)",
               transformOrigin: "center center",
             }}
           >
