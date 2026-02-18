@@ -15,6 +15,9 @@ interface MarkerDotProps {
   onClick: () => void;
 }
 
+const MARKER_RADIUS = 20;
+const TOOLTIP_OFFSET = MARKER_RADIUS * 2;
+
 export function MarkerDot({
   marker,
   worldX,
@@ -67,7 +70,7 @@ export function MarkerDot({
     pulse.scale.setScalar(pulseScale);
     pulseMaterial.opacity = pulseOpacity;
     if (tooltipGroupRef.current) {
-      tooltipGroupRef.current.position.y = 14 / zoom;
+      tooltipGroupRef.current.position.y = TOOLTIP_OFFSET / zoom;
     }
   });
 
@@ -96,17 +99,17 @@ export function MarkerDot({
           document.body.style.cursor = "default";
         }}
       >
-        <circleGeometry args={[7, 32]} />
+        <circleGeometry args={[MARKER_RADIUS, 32]} />
         <meshBasicMaterial color={color} />
       </mesh>
 
       <mesh ref={pulseRef} raycast={() => null}>
-        <circleGeometry args={[7, 32]} />
+        <circleGeometry args={[MARKER_RADIUS, 32]} />
         <meshBasicMaterial ref={pulseMaterialRef} color={color} transparent opacity={0.5} />
       </mesh>
 
       {isHovered ? (
-        <group ref={tooltipGroupRef} position={[0, 14, 0]}>
+        <group ref={tooltipGroupRef} position={[0, TOOLTIP_OFFSET, 0]}>
           <Html center style={{ pointerEvents: "none" }}>
             <div style={tooltipStyle}>
               {marker.label}
