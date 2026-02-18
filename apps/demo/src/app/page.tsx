@@ -9,11 +9,11 @@ const layers = [
     src: "/overlay-cloud-back.png",
     zIndex: -1,
     animation: [
-      {
-        type: "wobble" as const,
-        offset: { x: 0, y: 1 },
-        duration: 10,
-      },
+      // {
+      //   type: "wobble" as const,
+      //   offset: { x: 0, y: 1 },
+      //   duration: 10,
+      // },
     ],
   },
   { id: "base", src: "/base-map.png", zIndex: 0 },
@@ -23,40 +23,42 @@ const layers = [
     zIndex: 1,
     position: { x: 0, y: 0 },
     animation: [
-      {
-        type: "wobble" as const,
-        offset: { x: 0, y: 0 },
-        duration: 10,
-      },
-      { type: "fade" as const, minOpacity: 0.4, maxOpacity: 1, duration: 3 },
+      // {
+      //   type: "wobble" as const,
+      //   offset: { x: 0, y: 0 },
+      //   duration: 10,
+      // },
+      { type: "fade" as const, minOpacity: 0.4, maxOpacity: 0.6, duration: 6 },
     ],
   },
-  // {
-  //   id: "cloud-slide-front",
-  //   src: "/cloud-slide-front.png",
-  //   zIndex: 4,
-  //   animation: [
-  //     {
-  //       type: "carousel" as const,
-  //       direction: { x: -1, y: 0 },
-  //       speed: 40,
-  //       easing: "ease-in-out" as const,
-  //     },
-  //   ],
-  // },
-  // {
-  //   id: "cloud-slide-front-2",
-  //   src: "/cloud-slide-front-2.png",
-  //   zIndex: 5,
-  //   animation: [
-  //     {
-  //       type: "carousel" as const,
-  //       direction: { x: -1, y: 0 },
-  //       speed: 10,
-  //       easing: "ease-in-out" as const,
-  //     },
-  //   ],
-  // },
+  {
+    id: "cloud-slide-front",
+    src: "/cloud-slide-front.png",
+    zIndex: 4,
+    animation: [
+      {
+        type: "carousel" as const,
+        direction: { x: -1, y: 0 },
+        speed: 40,
+        easing: "ease-in-out" as const,
+      },
+      { type: "fade" as const, minOpacity: 0.6, maxOpacity: 1, duration: 10 }
+    ],
+  },
+  {
+    id: "cloud-slide-front-2",
+    src: "/cloud-slide-front-2.png",
+    zIndex: 5,
+    animation: [
+      {
+        type: "carousel" as const,
+        direction: { x: -1, y: 0 },
+        speed: 10,
+        easing: "ease-in-out" as const,
+      },
+      { type: "fade" as const, minOpacity: 0.6, maxOpacity: 1, duration: 3 }
+    ],
+  },
 ];
 
 const markers: MapMarker[] = [
@@ -99,46 +101,7 @@ export default function Home() {
             scale: 1,
           },
         ]}
-        fogEffects={[
-          {
-            id: "mist",
-            src: "/cloud-slide-front-2.png",
-            speed: 15,
-            direction: { x: 1, y: 0.2 },
-            opacity: 0.4,
-            opacityPulse: {
-              minOpacity: 0.2,
-              maxOpacity: 0.5,
-              duration: 5,
-              easing: "ease-in-out",
-            },
-            scaleBreathing: {
-              amplitude: 0.02,
-              duration: 7,
-              easing: "ease-in-out",
-            },
-            zIndex: 5,
-          },
-          {
-            id: "mist-2",
-            src: "/cloud-slide-front.png",
-            speed: 15,
-            direction: { x: 1, y: 0.2 },
-            opacity: 0.4,
-            opacityPulse: {
-              minOpacity: 0.5,
-              maxOpacity: 0.8,
-              duration: 5,
-              easing: "ease-in-out",
-            },
-            scaleBreathing: {
-              amplitude: 0.02,
-              duration: 7,
-              easing: "ease-in-out",
-            },
-            zIndex: 4,
-          },
-        ]}
+        fogEffects={[]}
         onMarkerClick={(markerId) => {
           console.log("[demo] marker clicked:", markerId);
           setSelectedMarkerId(markerId);
