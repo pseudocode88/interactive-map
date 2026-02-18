@@ -113,14 +113,10 @@
 - Configurable marker color and labels
 - `onMarkerClick` and `onHoverChange` callbacks
 
----
-
-## Remaining Chunks
-
 ### Chunk 7a: Sprite Effects (Flying Birds, Butterflies, etc.)
-**Status:** Not Started
+**Status:** Done
+**Plan:** [chunk-7a-sprite-effects-2026-02-18.md](plans/done/chunk-7a-sprite-effects-2026-02-18.md)
 
-Scope:
 - Generic sprite effect system (reusable for birds, butterflies, leaves, etc.)
 - Sprite sheet support with auto-detected grid layout
 - Procedural natural-looking flight paths (spawn at edge, fly across, despawn/respawn)
@@ -128,6 +124,10 @@ Scope:
 - Multiple independent sprite groups via array of configs
 - Parallax-aware (participates in parallax like regular layers)
 - Frame-by-frame sprite sheet animation
+
+---
+
+## Remaining Chunks
 
 ### Chunk 7b: Sparkling / Particle Effects
 **Status:** Not Started
@@ -160,19 +160,22 @@ Scope:
 packages/interactive-map/src/
 ├── components/
 │   ├── InteractiveMap.tsx      # Public entry point
-│   ├── MapScene.tsx            # Scene container, sorts/renders layers + markers
+│   ├── MapScene.tsx            # Scene container, sorts/renders layers + markers + sprites
 │   ├── MapLayerMesh.tsx        # Individual layer rendering (sRGB, parallax)
 │   ├── CameraController.tsx    # Pan + zoom controls (cover-fit, baseLayerId aware)
 │   ├── MarkerDot.tsx           # Pulsing glow marker rendered on map
-│   └── MarkerTooltip.tsx       # Hover tooltip for markers
+│   ├── MarkerTooltip.tsx       # Hover tooltip for markers
+│   └── SpriteEffect.tsx        # Animated sprite sheet effects (birds, butterflies, etc.)
 ├── hooks/
 │   ├── useBaseImageSize.ts     # Base image dimension detection
 │   └── useContainerSize.ts     # Container ResizeObserver
 ├── utils/
 │   ├── easing.ts               # Cubic-bezier + named preset easing
 │   ├── animation.ts            # Pure animation math (bounce, carousel, fade, wobble)
-│   └── parallax.ts             # Parallax factor calculations (depth + drift modes)
+│   ├── parallax.ts             # Parallax factor calculations (depth + drift modes)
+│   ├── spriteSheet.ts          # Sprite sheet grid detection + frame UV calculation
+│   └── spriteInstances.ts      # Sprite instance lifecycle (spawn, update, despawn)
 ├── types/
-│   └── index.ts                # MapLayer, MapMarker, InteractiveMapProps, ParallaxConfig, etc.
+│   └── index.ts                # MapLayer, MapMarker, SpriteEffectConfig, InteractiveMapProps, etc.
 └── index.ts                    # Barrel exports
 ```
