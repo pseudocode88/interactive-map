@@ -341,7 +341,87 @@ This ensures `focusTarget` is always `null` when not actively animating, prevent
 
 ---
 
-## Fix 3: Clean up injected style tag on unmount (Minor)
+## Fix 3: Replace Drei `<Html>` with custom DOM overlay for markers (Critical)
+
+**Files:** `MarkerLayer.tsx`, `MapScene.tsx`, `InteractiveMap.tsx`
+
+**Problem:** Drei's `<Html>` component performs internal frustum visibility checks — it hides elements whose projected 3D position falls outside the camera's current frustum (NDC outside [-1, 1]). This causes two bugs:
+
+1. **"Not all markers loading"**: At zoom=1 with cover fitting, markers near the edges of the base image may sit just outside the camera frustum on one axis, so `<Html>` sets `display: none` on them.
+2. **"Markers hidden on zoom"**: During focus animation, the zoom (frustum narrowing) outruns the pan (camera repositioning). The frustum narrows before the camera reaches the marker, so the marker's NDC goes outside [-1, 1] temporarily, and `<Html>` hides it. Even after the animation completes, the marker may flicker.
+
+**Fix:** Replace Drei's `<Html>` with a **custom DOM overlay** that manually projects world positions to screen coordinates. This gives full control over visibility and avoids Drei's frustum culling.
+
+### Implementation
+
+1. **Add a marker overlay container in `InteractiveMap.tsx`:**
+   - After the `<Canvas>`, render a `<div>` absolutely positioned over the canvas with `pointerEvents: "none"` and `overflow: "hidden"`
+   - Pass a `ref` to this container div down to `MapScene` and then to `MarkerLayer`
+
+   ```tsx
+   const markerOverlayRef = useRef<HTMLDivElement>(null);
+
+   return (
+     <div ref={containerRef} style={{ ... }}>
+       <Canvas orthographic ...>
+         <MapScene markerOverlayRef={markerOverlayRef} ... />
+       </Canvas>
+       <div
+         ref={markerOverlayRef}
+         style={{
+           position: "absolute",
+           top: 0, left: 0, width: "100%", height: "100%",
+           pointerEvents: "none",
+           overflow: "hidden",
+         }}
+       />
+     </div>
+   );
+   ```
+
+2. **Rewrite `MarkerLayer` to use React portal + manual projection:**
+   - Remove all `<Html>` usage from Drei
+   - Use `createPortal` from `react-dom` to render marker HTML into the overlay container
+   - In `useFrame`, for each marker:
+     a. Convert marker image-pixel coords to world coords (same as before)
+     b. Project world position to NDC using `camera.projectionMatrix` and `camera.matrixWorldInverse`:
+        ```ts
+        const vec = new THREE.Vector3(worldX, worldY, markerZ);
+        vec.project(camera);
+        const screenX = (vec.x * 0.5 + 0.5) * size.width;
+        const screenY = (-vec.y * 0.5 + 0.5) * size.height;
+        ```
+     c. Set the marker div's `transform: translate(${screenX}px, ${screenY}px) scale(${hoverScale / zoom})` directly via ref
+   - **Do NOT hide markers based on frustum** — let `overflow: hidden` on the container naturally clip off-screen markers
+
+3. **Marker DOM structure** (rendered via portal):
+   - One wrapper `<div>` per marker, absolutely positioned at `top: 0; left: 0` with `transform` set per-frame
+   - Each wrapper contains the DefaultMarker (or custom renderMarker) + tooltip
+   - Wrapper has `pointerEvents: "auto"` so click/hover work
+   - Use `will-change: transform` for GPU-accelerated positioning
+
+4. **Pass `viewportRef`** to MarkerLayer instead of relying on `<Html>`'s internal camera tracking. The MarkerLayer already has access to viewportRef via MapScene — use it for the zoom value in scale compensation.
+
+5. **Performance:** Store marker div refs in a `useRef(Map<string, HTMLDivElement>)`. In `useFrame`, iterate the map and update each div's transform directly (no React state, no re-renders).
+
+### Props changes
+
+`MarkerLayerProps` adds:
+```ts
+overlayContainer: React.RefObject<HTMLDivElement>;
+viewportRef: React.RefObject<{ x: number; y: number; zoom: number }>;
+```
+
+`MapSceneProps` adds:
+```ts
+markerOverlayRef: React.RefObject<HTMLDivElement>;
+```
+
+Pass `markerOverlayRef` through `InteractiveMap → MapScene → MarkerLayer`.
+
+---
+
+## Fix 4: Clean up injected style tag on unmount (Minor)
 
 **File:** `DefaultMarker.tsx`
 
@@ -383,3 +463,4 @@ useEffect(() => {
 
 - 2026-02-18: Created plan for Chunk 6 - Map Markers & Interaction covering marker types, default visual, marker layer, zoom-to-marker, reset zoom, and demo integration.
 - 2026-02-18: Added review fixes — 2 major (stale focusTarget on interruption, CSS transition vs useFrame conflict) and 1 minor (style tag cleanup).
+- 2026-02-18: Added Fix 3 (Critical) — replace Drei `<Html>` with custom DOM overlay to fix markers not loading and markers disappearing on zoom. Drei's internal frustum culling hides markers when their projected position is outside the camera frustum, which happens during zoom animation (zoom outruns pan) and for edge markers at initial load. Renumbered old Fix 3 to Fix 4.
