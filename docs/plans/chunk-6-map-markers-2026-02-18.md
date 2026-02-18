@@ -3,7 +3,7 @@ Name: Chunk 6 - Map Markers & Interaction
 Type: Feature
 Created On: 2026-02-18
 Modified On: 2026-02-18
-Review Status: Fixes Required (Round 2)
+Review Status: Fixes Required (Round 3)
 ---
 
 # Brief
@@ -539,9 +539,111 @@ Alternatively, if tooltip show/hide can tolerate being driven by the rAF loop (w
 
 ---
 
+# Review Round 3 Fixes
+
+## Fix 9: Tooltip clipped by overlay overflow (Medium)
+
+**File:** `MarkerLayer.tsx`
+
+**Problem:** The marker overlay div uses `overflow: "hidden"` to clip off-screen markers. However, the tooltip is positioned above the marker with `bottom: 100%` and `translateY(-8px)`, which extends it beyond the marker wrapper's bounds. The overlay's `overflow: hidden` clips the tooltip, making it invisible on hover. This affects all markers, not just those near the top edge.
+
+**Fix:**
+
+Change `overflow: "hidden"` to `overflow: "visible"` on the overlay container div:
+
+```tsx
+<div
+  ref={overlayRef}
+  style={{
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "100%",
+    pointerEvents: "none",
+    overflow: "visible",  // was "hidden" — clipped tooltips
+  }}
+>
+```
+
+**Why this is safe:** The overlay is `position: absolute` inside a container with explicit `width`/`height` and no scrollbars. Markers positioned off-screen via `translate()` will simply paint outside the visible area — the browser won't create scrollbars for absolutely-positioned children of a sized container. The parent container's own `overflow` (or lack of it) and the viewport naturally bound what's visible.
+
+---
+
+## Fix 10: Cloud layer edge visible on zoom reset (Medium)
+
+**File:** `MapLayerMesh.tsx`
+
+**Problem:** The carousel animation translates a single mesh across the screen. The mesh geometry is exactly `textureWidth × textureHeight` — there is no tiling or duplication. When zoomed in, the narrow frustum hides the image edges. On zoom reset (or at `initialZoom: 1`), the frustum widens and the cloud image boundary becomes visible as a hard rectangular edge (visible in the right side of the screenshot).
+
+This is a pre-existing carousel limitation exposed by the zoom reset feature. The `cloud-slide-front.png` and `cloud-slide-front-2.png` images are smaller than the base map, so a single copy cannot cover the full visible width at all zoom levels.
+
+**Fix:**
+
+Duplicate the carousel mesh so the image tiles seamlessly. When a carousel animation is active, render **two copies** of the mesh offset by one image-width apart in the scroll direction. As one copy scrolls off-screen, the other fills the gap.
+
+### Implementation
+
+1. In `MapLayerMesh.tsx`, detect if the layer has a `carousel` animation:
+   ```ts
+   const hasCarousel = (animation ?? []).some((a) => a.type === "carousel");
+   ```
+
+2. If `hasCarousel` is true, find the carousel's normalized direction vector and compute an offset equal to the layer's geometry size along that direction:
+   ```ts
+   const carouselAnim = (animation ?? []).find((a) => a.type === "carousel") as CarouselAnimation;
+   const dir = normalizeDirection(carouselAnim.direction ?? { x: 1, y: 0 });
+   const tileOffsetX = dir.x * geoWidth;
+   const tileOffsetY = dir.y * geoHeight;
+   ```
+
+3. Render a second `<mesh>` (the "clone") alongside the original. Both share the same texture, geometry size, and z-position. In `useFrame`, position the clone at `(original.x + tileOffsetX, original.y + tileOffsetY)`:
+   ```ts
+   const cloneRef = useRef<Mesh>(null);
+
+   useFrame((_, delta) => {
+     // ... existing animation logic that sets meshRef position ...
+     if (cloneRef.current && meshRef.current) {
+       cloneRef.current.position.x = meshRef.current.position.x + tileOffsetX;
+       cloneRef.current.position.y = meshRef.current.position.y + tileOffsetY;
+       cloneRef.current.position.z = meshRef.current.position.z;
+       cloneRef.current.scale.copy(meshRef.current.scale);
+       if (animationResult.opacity !== null) {
+         const mat = cloneRef.current.material;
+         if ("opacity" in mat) mat.opacity = animationResult.opacity;
+       }
+     }
+   });
+   ```
+
+4. In the JSX return, conditionally render the clone:
+   ```tsx
+   return (
+     <>
+       <mesh ref={meshRef} position={[basePosition.x, basePosition.y, zIndex * 0.01]}>
+         <planeGeometry args={[geoWidth, geoHeight]} />
+         <meshBasicMaterial map={processedTexture} transparent />
+       </mesh>
+       {hasCarousel && (
+         <mesh ref={cloneRef} position={[basePosition.x, basePosition.y, zIndex * 0.01]}>
+           <planeGeometry args={[geoWidth, geoHeight]} />
+           <meshBasicMaterial map={processedTexture} transparent />
+         </mesh>
+       )}
+     </>
+   );
+   ```
+
+5. Export `normalizeDirection` from `animation.ts` (it's currently a local function) so `MapLayerMesh` can use it, or duplicate the trivial logic inline.
+
+**Note:** The `wrapCentered` function in `computeCarousel` already wraps the displacement so the primary mesh oscillates around center. The clone just needs to be offset by exactly one tile width in the scroll direction — `wrapCentered` ensures both copies together always cover the visible frustum.
+
+---
+
 # Log
 
 - 2026-02-18: Created plan for Chunk 6 - Map Markers & Interaction covering marker types, default visual, marker layer, zoom-to-marker, reset zoom, and demo integration.
 - 2026-02-18: Added review fixes — 2 major (stale focusTarget on interruption, CSS transition vs useFrame conflict) and 1 minor (style tag cleanup).
 - 2026-02-18: Added Fix 3 (Critical) — replace Drei `<Html>` with custom DOM overlay to fix markers not loading and markers disappearing on zoom. Drei's internal frustum culling hides markers when their projected position is outside the camera frustum, which happens during zoom animation (zoom outruns pan) and for edge markers at initial load. Renumbered old Fix 3 to Fix 4.
 - 2026-02-18: Review Round 2 — Fixes 1-4 all implemented correctly. R3F "Div is not part of THREE namespace" error resolved by moving MarkerLayer outside Canvas. Added Fix 5 (Medium: marker centering offset), Fix 6 (Minor: duplicate markersById), Fix 7 (Minor: dead viewportRef in MapScene), Fix 8 (Minor: stabilize rAF loop). Fix 5 is the only one affecting visible behavior — markers appear ~7px off-position.
+- 2026-02-18: Review Round 3 — Fixes 5-8 all implemented correctly. Two new bugs found: Fix 9 (Medium: tooltip clipped by overlay `overflow: hidden`), Fix 10 (Medium: cloud layer edge visible on zoom reset — pre-existing carousel limitation, needs mesh duplication for seamless tiling).
