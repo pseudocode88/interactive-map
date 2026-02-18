@@ -1,6 +1,6 @@
 import { useLoader } from "@react-three/fiber";
 import { useMemo, useRef } from "react";
-import { LinearFilter, Mesh, TextureLoader } from "three";
+import { LinearFilter, Mesh, SRGBColorSpace, TextureLoader } from "three";
 import { useLayerAnimation } from "../hooks/useLayerAnimation";
 import type { LayerAnimation } from "../types";
 
@@ -30,6 +30,7 @@ export function MapLayerMesh({
   const processedTexture = useMemo(() => {
     texture.minFilter = LinearFilter;
     texture.magFilter = LinearFilter;
+    texture.colorSpace = SRGBColorSpace;
     texture.needsUpdate = true;
 
     return texture;

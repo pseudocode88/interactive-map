@@ -2,6 +2,7 @@
 
 import { Canvas } from "@react-three/fiber";
 import { Suspense, useMemo, useRef } from "react";
+import { NoToneMapping } from "three";
 
 import type { InteractiveMapProps, PanConfig, ZoomConfig } from "../types";
 import { useBaseImageSize } from "../hooks/useBaseImageSize";
@@ -95,7 +96,7 @@ export function InteractiveMap({
           far: 100,
           position: [0, 0, 10],
         }}
-        gl={{ antialias: true }}
+        gl={{ antialias: true, toneMapping: NoToneMapping }}
         style={{ width: "100%", height: "100%" }}
       >
         <Suspense fallback={null}>
