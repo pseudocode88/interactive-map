@@ -4,6 +4,7 @@ import type {
   FogEffectConfig,
   MapLayer,
   MapMarker,
+  ParticleEffectConfig,
   PanConfig,
   ParallaxConfig,
   SpriteEffectConfig,
@@ -14,6 +15,7 @@ import { CameraController } from "./CameraController";
 import { FogEffect } from "./FogEffect";
 import { MapLayerMesh } from "./MapLayerMesh";
 import { MarkerDot } from "./MarkerDot";
+import { ParticleEffect } from "./ParticleEffect";
 import { SpriteEffect } from "./SpriteEffect";
 
 interface MapSceneProps {
@@ -31,6 +33,7 @@ interface MapSceneProps {
   markers?: MapMarker[];
   spriteEffects?: SpriteEffectConfig[];
   fogEffects?: FogEffectConfig[];
+  particleEffects?: ParticleEffectConfig[];
   onMarkerClick?: (markerId: string) => void;
   onMarkerHoverChange?: (markerId: string | null) => void;
   focusTarget?: { x: number; y: number } | null;
@@ -55,6 +58,7 @@ export function MapScene({
   markers,
   spriteEffects,
   fogEffects,
+  particleEffects,
   onMarkerClick,
   onMarkerHoverChange,
   focusTarget,
@@ -149,6 +153,55 @@ export function MapScene({
             parallaxFactor={parallaxFactor}
             parallaxMode={parallaxConfig?.mode}
             viewportRef={viewportRef}
+          />
+        );
+      })}
+      {(particleEffects ?? []).map((particle) => {
+        const attachedLayer = particle.layerId
+          ? layers.find((layer) => layer.id === particle.layerId)
+          : undefined;
+        const layerOffset = attachedLayer
+          ? {
+              x: attachedLayer.position?.x ?? 0,
+              y: attachedLayer.position?.y ?? 0,
+            }
+          : { x: 0, y: 0 };
+
+        let parallaxFactor: number;
+        if (attachedLayer && parallaxConfig) {
+          const isBaseLayer = attachedLayer.id === baseLayerId;
+          parallaxFactor = isBaseLayer
+            ? 1
+            : computeParallaxFactor(
+                attachedLayer,
+                baseLayerZIndex,
+                parallaxConfig.intensity
+              );
+        } else if (!parallaxConfig || particle.parallaxFactor !== undefined) {
+          parallaxFactor = particle.parallaxFactor ?? 1;
+        } else {
+          parallaxFactor = computeParallaxFactor(
+            {
+              id: particle.id,
+              src: "",
+              zIndex: particle.zIndex ?? 11,
+              parallaxFactor: particle.parallaxFactor,
+            },
+            baseLayerZIndex,
+            parallaxConfig.intensity
+          );
+        }
+
+        return (
+          <ParticleEffect
+            key={particle.id}
+            config={particle}
+            baseWidth={baseWidth}
+            baseHeight={baseHeight}
+            parallaxFactor={parallaxFactor}
+            parallaxMode={parallaxConfig?.mode}
+            viewportRef={viewportRef}
+            layerOffset={layerOffset}
           />
         );
       })}

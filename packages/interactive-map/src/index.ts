@@ -12,6 +12,7 @@ export type {
   LayerAnimation,
   MapLayer,
   MapMarker,
+  ParticleEffectConfig,
   ParallaxConfig,
   PanConfig,
   SpriteEffectConfig,

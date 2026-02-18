@@ -102,6 +102,37 @@ export default function Home() {
           },
         ]}
         fogEffects={[]}
+        particleEffects={[
+          {
+            id: "sparkles",
+            mode: "twinkle",
+            maxCount: 40,
+            color: "#FFD700",
+            size: 4,
+            sizeVariance: 0.5,
+            twinkleDuration: 2,
+            twinkleDurationVariance: 0.6,
+            region: { x: 600, y: 400, width: 800, height: 600 },
+            zIndex: 11,
+            opacity: 0.9,
+          },
+          {
+            id: "embers",
+            mode: "drift",
+            maxCount: 20,
+            color: "#FF6B35",
+            size: 3,
+            sizeVariance: 0.4,
+            driftDirection: { x: 0.1, y: 1 },
+            driftDirectionVariance: 20,
+            driftSpeed: 25,
+            driftSpeedVariance: 0.3,
+            driftDistance: 120,
+            region: { x: 1600, y: 800, width: 600, height: 400 },
+            zIndex: 11,
+            opacity: 0.8,
+          },
+        ]}
         onMarkerClick={(markerId) => {
           console.log("[demo] marker clicked:", markerId);
           setSelectedMarkerId(markerId);

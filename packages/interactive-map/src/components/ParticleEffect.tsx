@@ -1,0 +1,287 @@
+import { useFrame } from "@react-three/fiber";
+import type { RefObject } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  AdditiveBlending,
+  BufferAttribute,
+  Color,
+  LinearFilter,
+  Points,
+  ShaderMaterial,
+  SRGBColorSpace,
+  Texture,
+  TextureLoader,
+} from "three";
+import type { ParticleEffectConfig } from "../types";
+import { computeParallaxScale } from "../utils/parallax";
+import {
+  initializeParticles,
+  updateDriftParticle,
+  updateTwinkleParticle,
+  type ParticleInstance,
+} from "../utils/particles";
+
+interface ParticleEffectProps {
+  config: ParticleEffectConfig;
+  baseWidth: number;
+  baseHeight: number;
+  parallaxFactor: number;
+  parallaxMode?: "depth" | "drift";
+  viewportRef: RefObject<{ x: number; y: number; zoom: number }>;
+  /** Offset from the attached layer's position (0,0 if no layer attachment) */
+  layerOffset: { x: number; y: number };
+}
+
+const VERTEX_SHADER = `
+attribute float alpha;
+attribute float particleSize;
+varying float vAlpha;
+
+uniform float uOpacity;
+
+void main() {
+  vAlpha = alpha * uOpacity;
+  vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+  gl_Position = projectionMatrix * mvPosition;
+  gl_PointSize = particleSize;
+}
+`;
+
+const FRAGMENT_SHADER_CIRCLE = `
+uniform vec3 uColor;
+varying float vAlpha;
+
+void main() {
+  vec2 center = gl_PointCoord - vec2(0.5);
+  if (dot(center, center) > 0.25) discard;
+  gl_FragColor = vec4(uColor, vAlpha);
+}
+`;
+
+const FRAGMENT_SHADER_TEXTURE = `
+uniform vec3 uColor;
+uniform sampler2D uTexture;
+varying float vAlpha;
+
+void main() {
+  vec4 texColor = texture2D(uTexture, gl_PointCoord);
+  gl_FragColor = vec4(uColor * texColor.rgb, texColor.a * vAlpha);
+}
+`;
+
+export function ParticleEffect({
+  config,
+  baseWidth,
+  baseHeight,
+  parallaxFactor,
+  parallaxMode,
+  viewportRef,
+  layerOffset,
+}: ParticleEffectProps) {
+  const pointsRef = useRef<Points>(null);
+  const materialRef = useRef<ShaderMaterial>(null);
+  const positionAttributeRef = useRef<BufferAttribute>(null);
+  const alphaAttributeRef = useRef<BufferAttribute>(null);
+  const sizeAttributeRef = useRef<BufferAttribute>(null);
+  const particlesRef = useRef<ParticleInstance[]>([]);
+  const [texture, setTexture] = useState<Texture | null>(null);
+
+  const maxCount = Math.max(0, Math.floor(config.maxCount ?? 50));
+  const mode = config.mode ?? "twinkle";
+  const zIndex = config.zIndex ?? 11;
+  const opacity = config.opacity ?? 1;
+
+  const region = useMemo(
+    () =>
+      config.region ?? {
+        x: 0,
+        y: 0,
+        width: baseWidth,
+        height: baseHeight,
+      },
+    [baseHeight, baseWidth, config.region]
+  );
+
+  useEffect(() => {
+    if (!config.src) {
+      setTexture(null);
+      return;
+    }
+
+    const loader = new TextureLoader();
+    let disposed = false;
+    let loadedTexture: Texture | null = null;
+
+    loader.load(
+      config.src,
+      (nextTexture) => {
+        if (disposed) {
+          nextTexture.dispose();
+          return;
+        }
+
+        nextTexture.minFilter = LinearFilter;
+        nextTexture.magFilter = LinearFilter;
+        nextTexture.colorSpace = SRGBColorSpace;
+        nextTexture.needsUpdate = true;
+        loadedTexture = nextTexture;
+        setTexture(nextTexture);
+      },
+      undefined,
+      () => {
+        if (!disposed) {
+          setTexture(null);
+        }
+      }
+    );
+
+    return () => {
+      disposed = true;
+      if (loadedTexture) {
+        loadedTexture.dispose();
+      }
+    };
+  }, [config.src]);
+
+  const positionArray = useMemo(() => new Float32Array(maxCount * 3), [maxCount]);
+  const alphaArray = useMemo(() => new Float32Array(maxCount), [maxCount]);
+  const sizeArray = useMemo(() => new Float32Array(maxCount), [maxCount]);
+
+  useEffect(() => {
+    particlesRef.current = initializeParticles(
+      config,
+      region.width,
+      region.height,
+      maxCount
+    );
+  }, [
+    config,
+    region.height,
+    region.width,
+    maxCount,
+  ]);
+
+  const uniforms = useMemo(() => {
+    const baseUniforms: {
+      uColor: { value: Color };
+      uOpacity: { value: number };
+      uTexture?: { value: Texture };
+    } = {
+      uColor: { value: new Color(config.color ?? "#ffffff") },
+      uOpacity: { value: opacity },
+    };
+
+    if (texture) {
+      baseUniforms.uTexture = { value: texture };
+    }
+
+    return baseUniforms;
+  }, [config.color, opacity, texture]);
+
+  useFrame((_, delta) => {
+    const cappedDelta = Math.min(delta, 0.1);
+    const particles = particlesRef.current;
+    const viewport = viewportRef.current ?? { x: 0, y: 0, zoom: 1 };
+
+    if (materialRef.current) {
+      materialRef.current.uniforms.uOpacity.value = opacity;
+      materialRef.current.uniforms.uColor.value.set(config.color ?? "#ffffff");
+      if (texture && materialRef.current.uniforms.uTexture) {
+        materialRef.current.uniforms.uTexture.value = texture;
+      }
+    }
+
+    for (let index = 0; index < maxCount; index += 1) {
+      let particle = particles[index];
+      if (!particle) {
+        particle = initializeParticles(config, region.width, region.height, 1)[0];
+        particles[index] = particle;
+      }
+
+      if (mode === "drift") {
+        updateDriftParticle(particle, cappedDelta, config, region.width, region.height);
+      } else {
+        updateTwinkleParticle(particle, cappedDelta, region.width, region.height);
+      }
+
+      const worldX = region.x + particle.x - baseWidth / 2 + layerOffset.x;
+      const worldY = baseHeight / 2 - (region.y + particle.y) + layerOffset.y;
+      const baseOffset = index * 3;
+
+      positionArray[baseOffset] = worldX;
+      positionArray[baseOffset + 1] = worldY;
+      positionArray[baseOffset + 2] = 0;
+      alphaArray[index] = particle.alpha;
+      sizeArray[index] = particle.size;
+    }
+
+    if (positionAttributeRef.current) {
+      positionAttributeRef.current.needsUpdate = true;
+    }
+    if (alphaAttributeRef.current) {
+      alphaAttributeRef.current.needsUpdate = true;
+    }
+    if (sizeAttributeRef.current) {
+      sizeAttributeRef.current.needsUpdate = true;
+    }
+
+    const panOffsetX = viewport.x * (1 - parallaxFactor);
+    const panOffsetY = viewport.y * (1 - parallaxFactor);
+
+    let x = panOffsetX;
+    let y = panOffsetY;
+    if (parallaxMode === "drift" && parallaxFactor !== 1) {
+      const driftStrength = 0.1;
+      const zoomDrift = (viewport.zoom - 1) * (parallaxFactor - 1) * driftStrength;
+      x += viewport.x * zoomDrift;
+      y += viewport.y * zoomDrift;
+    }
+
+    if (pointsRef.current) {
+      pointsRef.current.position.x = x;
+      pointsRef.current.position.y = y;
+      pointsRef.current.position.z = zIndex * 0.01;
+
+      if (parallaxMode === "depth" && parallaxFactor !== 1) {
+        const baseZoom = Math.max(0.001, viewport.zoom);
+        const zoomFactor = computeParallaxScale(parallaxFactor, parallaxMode);
+        const layerZoom = Math.max(0.001, 1 + (baseZoom - 1) * zoomFactor);
+        const depthScale = layerZoom / baseZoom;
+        pointsRef.current.scale.set(depthScale, depthScale, 1);
+      } else {
+        pointsRef.current.scale.set(1, 1, 1);
+      }
+    }
+  });
+
+  return (
+    <points ref={pointsRef}>
+      <bufferGeometry>
+        <bufferAttribute
+          ref={positionAttributeRef}
+          attach="attributes-position"
+          args={[positionArray, 3]}
+        />
+        <bufferAttribute
+          ref={alphaAttributeRef}
+          attach="attributes-alpha"
+          args={[alphaArray, 1]}
+        />
+        <bufferAttribute
+          ref={sizeAttributeRef}
+          attach="attributes-particleSize"
+          args={[sizeArray, 1]}
+        />
+      </bufferGeometry>
+      <shaderMaterial
+        ref={materialRef}
+        vertexShader={VERTEX_SHADER}
+        fragmentShader={texture ? FRAGMENT_SHADER_TEXTURE : FRAGMENT_SHADER_CIRCLE}
+        uniforms={uniforms}
+        transparent
+        depthWrite={false}
+        blending={AdditiveBlending}
+      />
+    </points>
+  );
+}

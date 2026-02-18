@@ -203,6 +203,73 @@ export interface FogEffectConfig {
   parallaxFactor?: number;
 }
 
+export interface ParticleEffectConfig {
+  /** Unique ID for this particle effect */
+  id: string;
+  /**
+   * Visual mode:
+   * - 'twinkle': particles appear at random positions, fade in/out, then reappear elsewhere (stationary).
+   * - 'drift': particles spawn at random positions, move in a direction while fading out, then respawn.
+   * Default: 'twinkle'
+   */
+  mode?: "twinkle" | "drift";
+  /** Maximum number of particles. Default: 50 */
+  maxCount?: number;
+  /** Particle color as a CSS color string (hex, rgb, etc.). Default: "#ffffff" */
+  color?: string;
+  /** Base particle size in pixels. Default: 3 */
+  size?: number;
+  /** Random size variance factor (0–1). Each particle gets size * (1 ± sizeVariance). Default: 0.3 */
+  sizeVariance?: number;
+  /**
+   * Optional PNG texture for particles (e.g., a star/sparkle image).
+   * If provided, each particle renders this texture instead of a plain dot.
+   * If omitted, particles render as solid colored circles.
+   */
+  src?: string;
+  /**
+   * Optional rectangular region in base image pixel coordinates where particles spawn.
+   * If omitted, particles cover the entire map (0, 0, baseWidth, baseHeight).
+   */
+  region?: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+  /**
+   * Optional layer ID to attach this particle effect to.
+   * When set, particles inherit the layer's base position offset and parallax factor.
+   * The region (if provided) is relative to the layer's position.
+   */
+  layerId?: string;
+  /** Duration of one twinkle cycle (fade in → hold → fade out) in seconds. Default: 2 */
+  twinkleDuration?: number;
+  /** Random duration variance factor (0–1). Default: 0.5 */
+  twinkleDurationVariance?: number;
+  /** Drift direction as a normalized vector. Default: { x: 0, y: 1 } (upward in world space) */
+  driftDirection?: { x: number; y: number };
+  /** Random angle variance in degrees applied per-particle. Default: 15 */
+  driftDirectionVariance?: number;
+  /** Drift speed in pixels per second. Default: 30 */
+  driftSpeed?: number;
+  /** Random speed variance factor (0–1). Default: 0.3 */
+  driftSpeedVariance?: number;
+  /** How far a particle drifts (in pixels) before it fades out and respawns. Default: 100 */
+  driftDistance?: number;
+  /** zIndex for depth ordering (same system as MapLayer). Default: 11 */
+  zIndex?: number;
+  /**
+   * Override the auto-calculated parallax factor for this particle effect.
+   * Only used when parallaxConfig is provided on the map AND layerId is NOT set.
+   * If layerId is set, the attached layer's parallax factor is used instead.
+   * 1.0 = moves with camera. < 1 = slower (farther). > 1 = faster (closer).
+   */
+  parallaxFactor?: number;
+  /** Base opacity multiplier for all particles (0–1). Default: 1 */
+  opacity?: number;
+}
+
 export interface InteractiveMapProps {
   layers: MapLayer[];
   /** ID of the layer to use as the viewport reference. If not provided, defaults to the layer with the lowest zIndex. */
@@ -220,6 +287,8 @@ export interface InteractiveMapProps {
   spriteEffects?: SpriteEffectConfig[];
   /** Array of fog effect configurations */
   fogEffects?: FogEffectConfig[];
+  /** Array of particle effect configurations (sparkles, embers, fairy dust, etc.) */
+  particleEffects?: ParticleEffectConfig[];
   /** Called when a marker is clicked. Receives the marker ID. */
   onMarkerClick?: (markerId: string) => void;
   /**
