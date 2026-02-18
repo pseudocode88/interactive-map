@@ -17,6 +17,9 @@ interface MarkerDotProps {
 
 const MARKER_RADIUS = 20;
 const TOOLTIP_OFFSET = MARKER_RADIUS * 2;
+const DOT_PULSE_DURATION_SECONDS = 1.5;
+const DOT_PULSE_MIN_SCALE = 0.92;
+const DOT_PULSE_MAX_SCALE = 1.08;
 
 export function MarkerDot({
   marker,
@@ -60,7 +63,15 @@ export function MarkerDot({
     }
 
     const zoom = Math.max(0.001, Number(state.camera.userData.interactiveMapZoom ?? 1));
-    const targetScale = (isHovered ? 1.3 : 1) / zoom;
+    const pulseProgress =
+      (Math.sin((state.clock.getElapsedTime() / DOT_PULSE_DURATION_SECONDS) * Math.PI * 2) +
+        1) /
+      2;
+    const dotPulseScale =
+      DOT_PULSE_MIN_SCALE +
+      (DOT_PULSE_MAX_SCALE - DOT_PULSE_MIN_SCALE) * pulseProgress;
+    const hoverScale = isHovered ? 1.3 : 1;
+    const targetScale = (hoverScale * dotPulseScale) / zoom;
     currentScale.current += (targetScale - currentScale.current) * 0.2;
     dot.scale.setScalar(currentScale.current);
 
