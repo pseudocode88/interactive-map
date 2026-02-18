@@ -96,12 +96,9 @@ export function CameraController({
     initialZoom: 1,
   });
 
-  useEffect(() => {
-    currentZoom.current = zoomConfig.initialZoom;
-    targetZoom.current = zoomConfig.initialZoom;
-
-    const halfW = baseFrustumHalfWidth / zoomConfig.initialZoom;
-    const halfH = baseFrustumHalfHeight / zoomConfig.initialZoom;
+  const applyFrustumForZoom = (zoom: number) => {
+    const halfW = baseFrustumHalfWidth / zoom;
+    const halfH = baseFrustumHalfHeight / zoom;
     orthoCamera.left = -halfW;
     orthoCamera.right = halfW;
     orthoCamera.top = halfH;
@@ -115,13 +112,22 @@ export function CameraController({
       baseWidth,
       baseHeight
     );
+  };
+
+  useEffect(() => {
+    currentZoom.current = zoomConfig.initialZoom;
+    targetZoom.current = zoomConfig.initialZoom;
+    applyFrustumForZoom(zoomConfig.initialZoom);
+  }, [zoomConfig.initialZoom]);
+
+  useEffect(() => {
+    applyFrustumForZoom(currentZoom.current);
   }, [
     baseFrustumHalfHeight,
     baseFrustumHalfWidth,
     baseHeight,
     baseWidth,
     orthoCamera,
-    zoomConfig.initialZoom,
   ]);
 
   useEffect(() => {
@@ -281,6 +287,13 @@ export function CameraController({
     pointers.current.delete(event.pointerId);
 
     if (pinchState.current.isPinching) {
+      if (pointers.current.size === 2) {
+        const [p1, p2] = Array.from(pointers.current.values());
+        pinchState.current.initialDistance = getDistance(p1, p2);
+        pinchState.current.initialZoom = targetZoom.current;
+        return;
+      }
+
       pinchState.current.isPinching = false;
 
       if (pointers.current.size === 1 && panConfig.enabled) {
