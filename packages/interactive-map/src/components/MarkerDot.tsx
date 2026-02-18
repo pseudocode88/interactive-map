@@ -37,8 +37,10 @@ export function MarkerDot({
   const haloMaterialRef = useRef<MeshBasicMaterial>(null);
   const pulseMaterialRef = useRef<MeshBasicMaterial>(null);
   const tooltipGroupRef = useRef<Group>(null);
+  const tooltipPinTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const currentScale = useRef(1);
   const [isHovered, setIsHovered] = useState(false);
+  const [isTooltipPinned, setIsTooltipPinned] = useState(false);
   const color = marker.color ?? "#000";
 
   const tooltipStyle = useMemo(
@@ -98,9 +100,14 @@ export function MarkerDot({
 
   useEffect(() => {
     return () => {
+      if (tooltipPinTimeoutRef.current) {
+        clearTimeout(tooltipPinTimeoutRef.current);
+      }
       document.body.style.cursor = "default";
     };
   }, []);
+
+  const showTooltip = isHovered || isTooltipPinned;
 
   return (
     <group position={[worldX, worldY, zPosition]}>
@@ -111,6 +118,13 @@ export function MarkerDot({
         }}
         onClick={(event) => {
           event.stopPropagation();
+          setIsTooltipPinned(true);
+          if (tooltipPinTimeoutRef.current) {
+            clearTimeout(tooltipPinTimeoutRef.current);
+          }
+          tooltipPinTimeoutRef.current = setTimeout(() => {
+            setIsTooltipPinned(false);
+          }, 1200);
           onClick();
         }}
         onPointerEnter={(event) => {
@@ -152,9 +166,9 @@ export function MarkerDot({
         />
       </mesh>
 
-      {isHovered ? (
+      {showTooltip ? (
         <group ref={tooltipGroupRef} position={[0, TOOLTIP_OFFSET, 0]}>
-          <Html center style={{ pointerEvents: "none" }}>
+          <Html center occlude={false} zIndexRange={[100, 0]} style={{ pointerEvents: "none" }}>
             <div style={tooltipStyle}>
               {marker.label}
               <div
