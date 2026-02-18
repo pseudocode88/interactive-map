@@ -1,10 +1,7 @@
 "use client";
 
-import { useFrame, useThree } from "@react-three/fiber";
 import type { ReactNode, RefObject } from "react";
-import { useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import { Vector3 } from "three";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { MapMarker } from "../types";
 import { DefaultMarker } from "./DefaultMarker";
@@ -13,23 +10,17 @@ interface MarkerLayerProps {
   markers: MapMarker[];
   baseImageWidth: number;
   baseImageHeight: number;
-  baseLayerZIndex: number;
+  baseFrustumHalfWidth: number;
+  baseFrustumHalfHeight: number;
   onMarkerClick: (markerId: string) => void;
   renderMarker?: (marker: MapMarker) => ReactNode;
-  overlayContainer: RefObject<HTMLDivElement | null>;
   viewportRef: RefObject<{ x: number; y: number; zoom: number }>;
 }
 
-function toWorldPosition(
-  marker: MapMarker,
-  baseImageWidth: number,
-  baseImageHeight: number,
-  markerLayerZ: number
-) {
+function toWorldPosition(marker: MapMarker, baseImageWidth: number, baseImageHeight: number) {
   return {
     x: marker.x - baseImageWidth / 2,
     y: baseImageHeight / 2 - marker.y,
-    z: markerLayerZ,
   };
 }
 
@@ -37,47 +28,82 @@ export function MarkerLayer({
   markers,
   baseImageWidth,
   baseImageHeight,
-  baseLayerZIndex,
+  baseFrustumHalfWidth,
+  baseFrustumHalfHeight,
   onMarkerClick,
   renderMarker,
-  overlayContainer,
   viewportRef,
 }: MarkerLayerProps) {
-  const { camera, size } = useThree();
-  const markerLayerZ = baseLayerZIndex * 0.01 + 0.005;
+  const overlayRef = useRef<HTMLDivElement>(null);
   const markerRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const hoverScaleRefs = useRef<Map<string, number>>(new Map());
-  const projectVector = useRef(new Vector3());
   const [hoveredMarkers, setHoveredMarkers] = useState<Record<string, boolean>>({});
 
   const markersById = useMemo(() => {
     return new Map(markers.map((marker) => [marker.id, marker]));
   }, [markers]);
 
-  useFrame(() => {
-    const zoom = Math.max(0.001, viewportRef.current?.zoom ?? 1);
+  useEffect(() => {
+    let frameId = 0;
 
-    markerRefs.current.forEach((element, markerId) => {
-      const marker = markersById.get(markerId);
-      if (!marker) {
+    const updateTransforms = () => {
+      const overlay = overlayRef.current;
+      if (!overlay) {
+        frameId = requestAnimationFrame(updateTransforms);
         return;
       }
 
-      const world = toWorldPosition(marker, baseImageWidth, baseImageHeight, markerLayerZ);
-      projectVector.current.set(world.x, world.y, world.z).project(camera);
+      const width = overlay.clientWidth;
+      const height = overlay.clientHeight;
+      if (width === 0 || height === 0) {
+        frameId = requestAnimationFrame(updateTransforms);
+        return;
+      }
 
-      const screenX = (projectVector.current.x * 0.5 + 0.5) * size.width;
-      const screenY = (-projectVector.current.y * 0.5 + 0.5) * size.height;
+      const viewport = viewportRef.current;
+      const zoom = Math.max(0.001, viewport?.zoom ?? 1);
+      const cameraX = viewport?.x ?? 0;
+      const cameraY = viewport?.y ?? 0;
+      const halfWidth = baseFrustumHalfWidth / zoom;
+      const halfHeight = baseFrustumHalfHeight / zoom;
 
-      const currentHoverScale = hoverScaleRefs.current.get(markerId) ?? 1;
-      const targetHoverScale = hoveredMarkers[markerId] ? 1.3 : 1;
-      const nextHoverScale =
-        currentHoverScale + (targetHoverScale - currentHoverScale) * 0.2;
+      markerRefs.current.forEach((element, markerId) => {
+        const marker = markersById.get(markerId);
+        if (!marker) {
+          return;
+        }
 
-      hoverScaleRefs.current.set(markerId, nextHoverScale);
-      element.style.transform = `translate(${screenX}px, ${screenY}px) scale(${nextHoverScale / zoom})`;
-    });
-  });
+        const world = toWorldPosition(marker, baseImageWidth, baseImageHeight);
+        const ndcX = (world.x - cameraX) / halfWidth;
+        const ndcY = (world.y - cameraY) / halfHeight;
+
+        const screenX = (ndcX * 0.5 + 0.5) * width;
+        const screenY = (-ndcY * 0.5 + 0.5) * height;
+
+        const currentHoverScale = hoverScaleRefs.current.get(markerId) ?? 1;
+        const targetHoverScale = renderMarker && hoveredMarkers[markerId] ? 1.3 : 1;
+        const nextHoverScale =
+          currentHoverScale + (targetHoverScale - currentHoverScale) * 0.2;
+
+        hoverScaleRefs.current.set(markerId, nextHoverScale);
+        element.style.transform = `translate(${screenX}px, ${screenY}px) scale(${nextHoverScale / zoom})`;
+      });
+
+      frameId = requestAnimationFrame(updateTransforms);
+    };
+
+    frameId = requestAnimationFrame(updateTransforms);
+    return () => cancelAnimationFrame(frameId);
+  }, [
+    baseFrustumHalfHeight,
+    baseFrustumHalfWidth,
+    baseImageHeight,
+    baseImageWidth,
+    hoveredMarkers,
+    markersById,
+    renderMarker,
+    viewportRef,
+  ]);
 
   const setMarkerRef = (markerId: string, node: HTMLDivElement | null) => {
     if (node) {
@@ -89,13 +115,19 @@ export function MarkerLayer({
     hoverScaleRefs.current.delete(markerId);
   };
 
-  const overlayRoot = overlayContainer.current;
-  if (!overlayRoot) {
-    return null;
-  }
-
-  return createPortal(
-    <>
+  return (
+    <div
+      ref={overlayRef}
+      style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        width: "100%",
+        height: "100%",
+        pointerEvents: "none",
+        overflow: "hidden",
+      }}
+    >
       {markers.map((marker) => {
         const markerColor = marker.color ?? "#ff4444";
         const isHovered = hoveredMarkers[marker.id] ?? false;
@@ -170,7 +202,6 @@ export function MarkerLayer({
           </div>
         );
       })}
-    </>,
-    overlayRoot
+    </div>
   );
 }

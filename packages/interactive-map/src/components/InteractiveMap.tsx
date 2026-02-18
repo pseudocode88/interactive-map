@@ -1,7 +1,7 @@
 "use client";
 
 import { Canvas } from "@react-three/fiber";
-import { Suspense, useMemo, useRef } from "react";
+import { Suspense, useMemo, useRef, useState } from "react";
 import { NoToneMapping } from "three";
 
 import type {
@@ -13,6 +13,14 @@ import type {
 import { useBaseImageSize } from "../hooks/useBaseImageSize";
 import { useContainerSize } from "../hooks/useContainerSize";
 import { MapScene } from "./MapScene";
+import { MarkerLayer } from "./MarkerLayer";
+
+function toWorldCoordinates(x: number, y: number, baseWidth: number, baseHeight: number) {
+  return {
+    x: x - baseWidth / 2,
+    y: baseHeight / 2 - y,
+  };
+}
 
 export function InteractiveMap({
   layers,
@@ -29,7 +37,9 @@ export function InteractiveMap({
   resetZoomTrigger,
 }: InteractiveMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const markerOverlayRef = useRef<HTMLDivElement>(null);
+  const viewportRef = useRef({ x: 0, y: 0, zoom: zoomConfig?.initialZoom ?? 1 });
+  const [focusTarget, setFocusTarget] = useState<{ x: number; y: number } | null>(null);
+
   const baseLayer = useMemo(() => {
     if (layers.length === 0) {
       return null;
@@ -51,6 +61,10 @@ export function InteractiveMap({
 
   const baseSize = useBaseImageSize(baseLayer?.src ?? "");
   const containerSize = useContainerSize(containerRef);
+
+  const markersById = useMemo(() => {
+    return new Map((markers ?? []).map((marker) => [marker.id, marker]));
+  }, [markers]);
 
   if (
     !baseLayer ||
@@ -141,26 +155,38 @@ export function InteractiveMap({
             panConfig={resolvedPanConfig}
             zoomConfig={resolvedZoomConfig}
             parallaxConfig={resolvedParallaxConfig}
-            markers={markers}
-            onMarkerClick={onMarkerClick}
-            renderMarker={renderMarker}
+            focusTarget={focusTarget}
+            onFocusComplete={() => setFocusTarget(null)}
+            onFocusInterrupted={() => setFocusTarget(null)}
             resetZoomTrigger={resetZoomTrigger}
-            markerOverlayRef={markerOverlayRef}
+            onViewportChange={(viewport) => {
+              viewportRef.current = viewport;
+            }}
           />
         </Suspense>
       </Canvas>
-      <div
-        ref={markerOverlayRef}
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          width: "100%",
-          height: "100%",
-          pointerEvents: "none",
-          overflow: "hidden",
-        }}
-      />
+      {markers && markers.length > 0 ? (
+        <MarkerLayer
+          markers={markers}
+          baseImageWidth={baseSize.width}
+          baseImageHeight={baseSize.height}
+          baseFrustumHalfWidth={halfWidth}
+          baseFrustumHalfHeight={halfHeight}
+          viewportRef={viewportRef}
+          onMarkerClick={(markerId) => {
+            const marker = markersById.get(markerId);
+            if (!marker) {
+              return;
+            }
+
+            setFocusTarget(
+              toWorldCoordinates(marker.x, marker.y, baseSize.width, baseSize.height)
+            );
+            onMarkerClick?.(markerId);
+          }}
+          renderMarker={renderMarker}
+        />
+      ) : null}
     </div>
   );
 }
