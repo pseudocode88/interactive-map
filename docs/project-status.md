@@ -74,21 +74,48 @@
 - Carousel: wrap (seamless loop at base image bounds) or infinite mode
 - Delta accumulation for tab visibility pause (no CPU when hidden)
 - Direct mesh/material mutation in `useFrame` (zero React re-renders)
-- New files: `utils/easing.ts`, `utils/animation.ts`, `hooks/useLayerAnimation.ts`
+
+### Fix: Texture Color Space
+**Status:** Done
+**Plan:** [fix-texture-color-space-2026-02-18.md](plans/done/fix-texture-color-space-2026-02-18.md)
+
+- Set texture color space to sRGB on all loaded textures
+- Disabled tone mapping on the renderer
+- Images now render with accurate color matching the source files
+
+### Enhancement: Base Layer Viewport Lock
+**Status:** Done
+**Plan:** [base-layer-viewport-lock-2026-02-18.md](plans/done/base-layer-viewport-lock-2026-02-18.md)
+
+- `baseLayerId` prop on `InteractiveMap` to specify which layer the camera locks to
+- Camera frustum, pan bounds, and zoom bounds reference the designated base layer
+- Defaults to the layer with the lowest zIndex if not specified
+
+### Feature: Layer Parallax
+**Status:** Done
+**Plan:** [layer-parallax-2026-02-18.md](plans/done/layer-parallax-2026-02-18.md)
+
+- Opt-in parallax via `parallaxConfig` prop
+- Closer layers (higher zIndex) move faster, farther layers move slower
+- Two zoom parallax modes: depth (scale-based pop-out) and drift (positional offset)
+- Auto-scaled layers to prevent empty edges during parallax movement
+- `utils/parallax.ts` for parallax factor calculations
+
+### Chunk 6: Map Markers & Interaction
+**Status:** Done
+**Plan:** [chunk-6-map-markers-2026-02-18.md](plans/done/chunk-6-map-markers-2026-02-18.md)
+
+- `MapMarker` type with pixel-coordinate positioning relative to base image
+- `MarkerDot` component with pulsing glow animation
+- `MarkerTooltip` component shown on hover
+- Click handler with smooth zoom-to-marker animation
+- `resetView` prop to zoom back out programmatically
+- Configurable marker color and labels
+- `onMarkerClick` and `onHoverChange` callbacks
 
 ---
 
 ## Remaining Chunks
-
-### Chunk 6: Markers & Events
-**Status:** Not Started
-
-Scope (from project brief):
-- Marker system rendered on top of map layers
-- Configurable marker positioning (world-space coordinates)
-- Click/tap event handling on markers
-- Callback/event emission on marker interaction
-- Markers should scale appropriately with zoom
 
 ### Chunk 7: Particle & Shader Effects
 **Status:** Not Started
@@ -107,17 +134,19 @@ Scope:
 packages/interactive-map/src/
 ├── components/
 │   ├── InteractiveMap.tsx      # Public entry point
-│   ├── MapScene.tsx            # Scene container, sorts/renders layers
-│   ├── MapLayerMesh.tsx        # Individual layer rendering
-│   └── CameraController.tsx   # Pan + zoom controls (cover-fit aware)
+│   ├── MapScene.tsx            # Scene container, sorts/renders layers + markers
+│   ├── MapLayerMesh.tsx        # Individual layer rendering (sRGB, parallax)
+│   ├── CameraController.tsx    # Pan + zoom controls (cover-fit, baseLayerId aware)
+│   ├── MarkerDot.tsx           # Pulsing glow marker rendered on map
+│   └── MarkerTooltip.tsx       # Hover tooltip for markers
 ├── hooks/
 │   ├── useBaseImageSize.ts     # Base image dimension detection
-│   ├── useContainerSize.ts     # Container ResizeObserver
-│   └── useLayerAnimation.ts    # Per-layer animation driver (useFrame)
+│   └── useContainerSize.ts     # Container ResizeObserver
 ├── utils/
 │   ├── easing.ts               # Cubic-bezier + named preset easing
-│   └── animation.ts            # Pure animation math (bounce, carousel, fade, wobble)
+│   ├── animation.ts            # Pure animation math (bounce, carousel, fade, wobble)
+│   └── parallax.ts             # Parallax factor calculations (depth + drift modes)
 ├── types/
-│   └── index.ts                # MapLayer, InteractiveMapProps, PanConfig, ZoomConfig, animation types
+│   └── index.ts                # MapLayer, MapMarker, InteractiveMapProps, ParallaxConfig, etc.
 └── index.ts                    # Barrel exports
 ```
