@@ -89,6 +89,8 @@ export interface ZoomConfig {
 
 export interface InteractiveMapProps {
   layers: MapLayer[];
+  /** ID of the layer to use as the viewport reference. If not provided, defaults to the layer with the lowest zIndex. */
+  baseLayerId?: string;
   width?: string;
   height?: string;
   className?: string;

@@ -6,20 +6,22 @@ const layers = [
     zIndex: -1,
     animation: [
       {
-        type: "carousel" as const
+        type: "wobble" as const,
+        offset: { x: 10, y: 0 },
+        duration: 10
       }
     ] 
   },
   { id: "base", src: "/base-map.png", zIndex: 0 },
   {
-    id: "cloud",
+    id: "cloud-front",
     src: "/overlay.png",
     zIndex: 1,
     position: { x: 0, y: -10 },
     animation: [
       {
         type: "bounce" as const,
-        direction: { x: 0, y: 1 },
+        direction: { x: 0, y: 10 },
         amplitude: 15,
         duration: 2,
         easing: "ease-in-out" as const,
@@ -34,8 +36,9 @@ export default function Home() {
     <main style={{ width: "100vw", height: "100vh", background: "#81D4E7" }}>
       <InteractiveMap
         layers={layers}
+        baseLayerId="base"
         panConfig={{ enabled: true, easingFactor: 0.15 }}
-        zoomConfig={{ enabled: true, minZoom: 1, maxZoom: 2, initialZoom: 1.4 }}
+        zoomConfig={{ enabled: true, minZoom: 1, maxZoom: 2, initialZoom: 1.2 }}
       />
     </main>
   );
