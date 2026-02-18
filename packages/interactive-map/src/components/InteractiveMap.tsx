@@ -13,7 +13,6 @@ import type {
 import { useBaseImageSize } from "../hooks/useBaseImageSize";
 import { useContainerSize } from "../hooks/useContainerSize";
 import { MapScene } from "./MapScene";
-import { MarkerLayer } from "./MarkerLayer";
 
 function toWorldCoordinates(x: number, y: number, baseWidth: number, baseHeight: number) {
   return {
@@ -33,7 +32,6 @@ export function InteractiveMap({
   parallaxConfig,
   markers,
   onMarkerClick,
-  renderMarker,
   resetZoomTrigger,
 }: InteractiveMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -61,10 +59,10 @@ export function InteractiveMap({
 
   const baseSize = useBaseImageSize(baseLayer?.src ?? "");
   const containerSize = useContainerSize(containerRef);
-
-  const markersById = useMemo(() => {
-    return new Map((markers ?? []).map((marker) => [marker.id, marker]));
-  }, [markers]);
+  const markersById = useMemo(
+    () => new Map((markers ?? []).map((marker) => [marker.id, marker])),
+    [markers]
+  );
 
   if (
     !baseLayer ||
@@ -156,6 +154,18 @@ export function InteractiveMap({
             zoomConfig={resolvedZoomConfig}
             parallaxConfig={resolvedParallaxConfig}
             viewportRef={viewportRef}
+            markers={markers}
+            onMarkerClick={(markerId) => {
+              const marker = markersById.get(markerId);
+              if (!marker) {
+                return;
+              }
+
+              setFocusTarget(
+                toWorldCoordinates(marker.x, marker.y, baseSize.width, baseSize.height)
+              );
+              onMarkerClick?.(markerId);
+            }}
             focusTarget={focusTarget}
             onFocusComplete={() => setFocusTarget(null)}
             onFocusInterrupted={() => setFocusTarget(null)}
@@ -166,29 +176,6 @@ export function InteractiveMap({
           />
         </Suspense>
       </Canvas>
-      {markers && markers.length > 0 ? (
-        <MarkerLayer
-          markers={markers}
-          markersById={markersById}
-          baseImageWidth={baseSize.width}
-          baseImageHeight={baseSize.height}
-          baseFrustumHalfWidth={halfWidth}
-          baseFrustumHalfHeight={halfHeight}
-          viewportRef={viewportRef}
-          onMarkerClick={(markerId) => {
-            const marker = markersById.get(markerId);
-            if (!marker) {
-              return;
-            }
-
-            setFocusTarget(
-              toWorldCoordinates(marker.x, marker.y, baseSize.width, baseSize.height)
-            );
-            onMarkerClick?.(markerId);
-          }}
-          renderMarker={renderMarker}
-        />
-      ) : null}
     </div>
   );
 }

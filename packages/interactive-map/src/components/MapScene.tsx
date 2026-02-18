@@ -2,6 +2,7 @@ import type { RefObject } from "react";
 import { useMemo } from "react";
 import type {
   MapLayer,
+  MapMarker,
   PanConfig,
   ParallaxConfig,
   ZoomConfig,
@@ -9,6 +10,7 @@ import type {
 import { computeParallaxFactor } from "../utils/parallax";
 import { CameraController } from "./CameraController";
 import { MapLayerMesh } from "./MapLayerMesh";
+import { MarkerDot } from "./MarkerDot";
 
 interface MapSceneProps {
   layers: MapLayer[];
@@ -22,6 +24,8 @@ interface MapSceneProps {
   zoomConfig: Required<ZoomConfig>;
   parallaxConfig?: Required<ParallaxConfig>;
   viewportRef: RefObject<{ x: number; y: number; zoom: number }>;
+  markers?: MapMarker[];
+  onMarkerClick?: (markerId: string) => void;
   focusTarget?: { x: number; y: number } | null;
   onFocusComplete?: () => void;
   onFocusInterrupted?: () => void;
@@ -41,6 +45,8 @@ export function MapScene({
   zoomConfig,
   parallaxConfig,
   viewportRef,
+  markers,
+  onMarkerClick,
   focusTarget,
   onFocusComplete,
   onFocusInterrupted,
@@ -94,6 +100,21 @@ export function MapScene({
             parallaxFactor={parallaxFactor}
             parallaxMode={parallaxConfig?.mode}
             viewportRef={viewportRef}
+          />
+        );
+      })}
+      {(markers ?? []).map((marker) => {
+        const worldX = marker.x - baseWidth / 2;
+        const worldY = baseHeight / 2 - marker.y;
+
+        return (
+          <MarkerDot
+            key={marker.id}
+            marker={marker}
+            worldX={worldX}
+            worldY={worldY}
+            zPosition={0.005}
+            onClick={() => onMarkerClick?.(marker.id)}
           />
         );
       })}

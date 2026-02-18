@@ -1,5 +1,3 @@
-import type { ReactNode } from "react";
-
 export type EasingPreset = "linear" | "ease-in" | "ease-out" | "ease-in-out";
 
 /**
@@ -135,12 +133,6 @@ export interface InteractiveMapProps {
   markers?: MapMarker[];
   /** Called when a marker is clicked. Receives the marker ID. */
   onMarkerClick?: (markerId: string) => void;
-  /**
-   * Custom render function for marker visuals. Receives the marker data.
-   * If not provided, the default pulsing dot is used.
-   * The returned element replaces ONLY the dot visual, not the tooltip.
-   */
-  renderMarker?: (marker: MapMarker) => ReactNode;
   /**
    * Increment this number to trigger a zoom reset (zooms out to initialZoom).
    * Pan position is preserved. E.g. set to Date.now() or a counter.
