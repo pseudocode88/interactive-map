@@ -3,6 +3,7 @@ Name: Chunk 6 - Map Markers & Interaction
 Type: Feature
 Created On: 2026-02-18
 Modified On: 2026-02-18
+Review Status: Fixes Required
 ---
 
 # Brief
@@ -276,6 +277,109 @@ const markers: MapMarker[] = [
 9. `renderMarker` prop allows replacing the default dot with a custom React component, while tooltip behavior is preserved
 10. Demo app shows working markers with click + reset zoom button
 
+# Review Fixes
+
+## Fix 1: Clear `focusTarget` on interruption (Major)
+
+**Files:** `CameraController.tsx`, `MapScene.tsx`
+
+**Problem:** When the user interrupts a focus animation (drag/scroll), `isFocusing` is cleared but `focusTarget` state in MapScene stays non-null. If the window resizes, the `focusTarget` useEffect re-fires with the stale target and re-animates the camera unexpectedly. This also prevents the same marker from being re-clicked reliably.
+
+**Fix:**
+
+1. Add `onFocusInterrupted` callback prop to `CameraControllerProps`:
+   ```ts
+   onFocusInterrupted?: () => void;
+   ```
+
+2. In `CameraController.tsx`, update `interruptFocus()` to notify the parent:
+   ```ts
+   const interruptFocus = () => {
+     if (isFocusing.current) {
+       isFocusing.current = false;
+       onFocusInterrupted?.();
+     }
+   };
+   ```
+
+3. In `MapScene.tsx`, pass the callback to clear focusTarget:
+   ```tsx
+   <CameraController
+     // ... existing props
+     onFocusInterrupted={() => setFocusTarget(null)}
+   />
+   ```
+
+This ensures `focusTarget` is always `null` when not actively animating, preventing spurious re-fires from dependency changes in the useEffect.
+
+---
+
+## Fix 2: Replace CSS transition with useFrame lerp for hover scale (Major)
+
+**File:** `MarkerLayer.tsx`
+
+**Problem:** The marker wrapper has `transition: "transform 150ms ease"` but `useFrame` also writes to `transform` every frame for zoom compensation (`scale(1/zoom)`). The CSS transition fights the per-frame updates, causing markers to visibly lag behind the correct size during zooming.
+
+**Fix:**
+
+1. Remove `transition: "transform 150ms ease"` from the wrapper div's inline styles.
+
+2. Add a `hoverScaleRef` to `MarkerItem` and lerp it in `useFrame`:
+   ```ts
+   const hoverScaleRef = useRef(1);
+
+   useFrame(() => {
+     if (!markerRef.current) return;
+     const targetHoverScale = isHovered ? 1.3 : 1;
+     hoverScaleRef.current += (targetHoverScale - hoverScaleRef.current) * 0.2;
+     const zoom = Math.max(0.001, viewportRef.current?.zoom ?? 1);
+     markerRef.current.style.transform = `scale(${hoverScaleRef.current / zoom})`;
+   });
+   ```
+
+3. Remove the existing separate `hoverScale` variable and the old `useFrame` transform logic since it is now consolidated into the single `useFrame` above.
+
+---
+
+## Fix 3: Clean up injected style tag on unmount (Minor)
+
+**File:** `DefaultMarker.tsx`
+
+**Problem:** `ensureMarkerStyles()` appends a `<style>` element to `document.head` but never removes it when all markers unmount. In SPAs where the map mounts/unmounts, orphaned style tags persist.
+
+**Fix:**
+
+Add a reference counter pattern:
+
+```ts
+let styleRefCount = 0;
+
+function mountMarkerStyles() {
+  styleRefCount++;
+  if (styleRefCount === 1) {
+    // Create and append the <style> tag (existing logic from ensureMarkerStyles)
+  }
+}
+
+function unmountMarkerStyles() {
+  styleRefCount--;
+  if (styleRefCount === 0) {
+    const el = document.getElementById("interactive-map-marker-styles");
+    if (el) el.remove();
+  }
+}
+```
+
+In `DefaultMarker`, call `mountMarkerStyles()` in a `useEffect` and return `unmountMarkerStyles` as cleanup:
+
+```ts
+useEffect(() => {
+  mountMarkerStyles();
+  return () => unmountMarkerStyles();
+}, []);
+```
+
 # Log
 
 - 2026-02-18: Created plan for Chunk 6 - Map Markers & Interaction covering marker types, default visual, marker layer, zoom-to-marker, reset zoom, and demo integration.
+- 2026-02-18: Added review fixes — 2 major (stale focusTarget on interruption, CSS transition vs useFrame conflict) and 1 minor (style tag cleanup).
