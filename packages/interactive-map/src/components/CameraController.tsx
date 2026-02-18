@@ -11,6 +11,7 @@ interface CameraControllerProps {
   baseHeight: number;
   panConfig: Required<PanConfig>;
   zoomConfig: Required<ZoomConfig>;
+  onViewportChange?: (viewport: { x: number; y: number; zoom: number }) => void;
 }
 
 interface Point {
@@ -75,6 +76,7 @@ export function CameraController({
   baseHeight,
   panConfig,
   zoomConfig,
+  onViewportChange,
 }: CameraControllerProps) {
   const { camera, size, gl } = useThree();
   const orthoCamera = camera as OrthographicCamera;
@@ -339,6 +341,12 @@ export function CameraController({
       camera.position.x += dx * panConfig.easingFactor;
       camera.position.y += dy * panConfig.easingFactor;
     }
+
+    onViewportChange?.({
+      x: camera.position.x,
+      y: camera.position.y,
+      zoom: currentZoom.current,
+    });
   });
 
   return (

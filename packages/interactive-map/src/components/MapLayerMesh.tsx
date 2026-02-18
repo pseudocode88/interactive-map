@@ -1,8 +1,11 @@
-import { useLoader } from "@react-three/fiber";
+import { useFrame, useLoader } from "@react-three/fiber";
+import type { RefObject } from "react";
 import { useMemo, useRef } from "react";
 import { LinearFilter, Mesh, SRGBColorSpace, TextureLoader } from "three";
-import { useLayerAnimation } from "../hooks/useLayerAnimation";
 import type { LayerAnimation } from "../types";
+import { computeAnimations } from "../utils/animation";
+import { resolveEasing } from "../utils/easing";
+import { computeParallaxScale } from "../utils/parallax";
 
 interface MapLayerMeshProps {
   src: string;
@@ -14,6 +17,10 @@ interface MapLayerMeshProps {
   animation?: LayerAnimation[];
   baseWidth: number;
   baseHeight: number;
+  parallaxFactor?: number;
+  parallaxMode?: "depth" | "drift";
+  autoScale?: number;
+  viewportRef?: RefObject<{ x: number; y: number; zoom: number }>;
 }
 
 export function MapLayerMesh({
@@ -23,38 +30,106 @@ export function MapLayerMesh({
   animation,
   baseWidth,
   baseHeight,
+  parallaxFactor = 1,
+  parallaxMode = "depth",
+  autoScale = 1,
+  viewportRef,
 }: MapLayerMeshProps) {
   const texture = useLoader(TextureLoader, src);
   const meshRef = useRef<Mesh>(null);
+  const elapsed = useRef(0);
 
   const processedTexture = useMemo(() => {
+    const safeAutoScale = Math.max(1, autoScale);
+    const uvScale = 1 / safeAutoScale;
+
     texture.minFilter = LinearFilter;
     texture.magFilter = LinearFilter;
     texture.colorSpace = SRGBColorSpace;
+    texture.repeat.set(uvScale, uvScale);
+    texture.offset.set((1 - uvScale) / 2, (1 - uvScale) / 2);
     texture.needsUpdate = true;
 
     return texture;
-  }, [texture]);
+  }, [autoScale, texture]);
+
+  const resolvedEasings = useMemo(
+    () =>
+      (animation ?? []).map((item) =>
+        "easing" in item ? resolveEasing(item.easing) : undefined
+      ),
+    [animation]
+  );
 
   const textureWidth = texture.image.width;
   const textureHeight = texture.image.height;
+  const safeAutoScale = Math.max(1, autoScale);
+  const geoWidth = textureWidth * safeAutoScale;
+  const geoHeight = textureHeight * safeAutoScale;
   const basePosition = {
     x: position?.x ?? 0,
     y: position?.y ?? 0,
   };
 
-  useLayerAnimation(meshRef, {
-    animations: animation ?? [],
-    basePosition,
-    baseWidth,
-    baseHeight,
-    layerWidth: textureWidth,
-    layerHeight: textureHeight,
+  useFrame((_, delta) => {
+    if (!meshRef.current) {
+      return;
+    }
+
+    const cappedDelta = Math.min(delta, 0.1);
+    elapsed.current += cappedDelta;
+
+    const animationResult =
+      animation && animation.length > 0
+        ? computeAnimations(
+            animation,
+            elapsed.current,
+            baseWidth,
+            baseHeight,
+            textureWidth,
+            textureHeight,
+            resolvedEasings
+          )
+        : { offsetX: 0, offsetY: 0, opacity: null };
+
+    const viewport = viewportRef?.current ?? { x: 0, y: 0, zoom: 1 };
+    const panOffsetX = viewport.x * (1 - parallaxFactor);
+    const panOffsetY = viewport.y * (1 - parallaxFactor);
+
+    let x = basePosition.x + animationResult.offsetX + panOffsetX;
+    let y = basePosition.y + animationResult.offsetY + panOffsetY;
+
+    if (parallaxMode === "drift" && parallaxFactor !== 1) {
+      const driftStrength = 0.1;
+      const zoomDrift = (viewport.zoom - 1) * (parallaxFactor - 1) * driftStrength;
+      x += viewport.x * zoomDrift;
+      y += viewport.y * zoomDrift;
+    }
+
+    meshRef.current.position.x = x;
+    meshRef.current.position.y = y;
+
+    if (parallaxMode === "depth" && parallaxFactor !== 1) {
+      const baseZoom = Math.max(0.001, viewport.zoom);
+      const zoomFactor = computeParallaxScale(parallaxFactor, parallaxMode);
+      const layerZoom = Math.max(0.001, 1 + (baseZoom - 1) * zoomFactor);
+      const scale = layerZoom / baseZoom;
+      meshRef.current.scale.set(scale, scale, 1);
+    } else {
+      meshRef.current.scale.set(1, 1, 1);
+    }
+
+    if (animationResult.opacity !== null) {
+      const material = meshRef.current.material;
+      if ("opacity" in material) {
+        material.opacity = animationResult.opacity;
+      }
+    }
   });
 
   return (
     <mesh ref={meshRef} position={[basePosition.x, basePosition.y, zIndex * 0.01]}>
-      <planeGeometry args={[textureWidth, textureHeight]} />
+      <planeGeometry args={[geoWidth, geoHeight]} />
       <meshBasicMaterial map={processedTexture} transparent />
     </mesh>
   );

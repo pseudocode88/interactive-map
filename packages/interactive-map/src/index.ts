@@ -8,6 +8,7 @@ export type {
   InteractiveMapProps,
   LayerAnimation,
   MapLayer,
+  ParallaxConfig,
   PanConfig,
   WobbleAnimation,
   ZoomConfig,

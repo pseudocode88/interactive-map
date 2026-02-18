@@ -4,7 +4,12 @@ import { Canvas } from "@react-three/fiber";
 import { Suspense, useMemo, useRef } from "react";
 import { NoToneMapping } from "three";
 
-import type { InteractiveMapProps, PanConfig, ZoomConfig } from "../types";
+import type {
+  InteractiveMapProps,
+  PanConfig,
+  ParallaxConfig,
+  ZoomConfig,
+} from "../types";
 import { useBaseImageSize } from "../hooks/useBaseImageSize";
 import { useContainerSize } from "../hooks/useContainerSize";
 import { MapScene } from "./MapScene";
@@ -17,6 +22,7 @@ export function InteractiveMap({
   className,
   panConfig,
   zoomConfig,
+  parallaxConfig,
 }: InteractiveMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const baseLayer = useMemo(() => {
@@ -71,6 +77,12 @@ export function InteractiveMap({
     scrollSpeed: zoomConfig?.scrollSpeed ?? 0.001,
     easingFactor: zoomConfig?.easingFactor ?? 0.15,
   };
+  const resolvedParallaxConfig: Required<ParallaxConfig> | undefined = parallaxConfig
+    ? {
+        intensity: parallaxConfig.intensity ?? 0.3,
+        mode: parallaxConfig.mode ?? "depth",
+      }
+    : undefined;
 
   const containerAspect = containerSize.height / containerSize.width;
   const imageAspect = baseSize.height / baseSize.width;
@@ -116,8 +128,13 @@ export function InteractiveMap({
             layers={layers}
             baseWidth={baseSize.width}
             baseHeight={baseSize.height}
+            baseFrustumHalfWidth={halfWidth}
+            baseFrustumHalfHeight={halfHeight}
+            baseLayerId={baseLayer.id}
+            baseLayerZIndex={baseLayer.zIndex}
             panConfig={resolvedPanConfig}
             zoomConfig={resolvedZoomConfig}
+            parallaxConfig={resolvedParallaxConfig}
           />
         </Suspense>
       </Canvas>

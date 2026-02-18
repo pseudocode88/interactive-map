@@ -71,6 +71,14 @@ export interface MapLayer {
   };
   /** Single animation or array of parallel animations. */
   animation?: LayerAnimation | LayerAnimation[];
+  /**
+   * Override the auto-calculated parallax factor for this layer.
+   * 1.0 = moves with camera (base layer speed).
+   * < 1.0 = moves slower (feels farther).
+   * > 1.0 = moves faster (feels closer).
+   * Only used when parallaxConfig is provided on the map.
+   */
+  parallaxFactor?: number;
 }
 
 export interface PanConfig {
@@ -87,6 +95,17 @@ export interface ZoomConfig {
   easingFactor?: number;
 }
 
+export interface ParallaxConfig {
+  /** Global multiplier applied to auto-calculated parallax factors. Default: 0.3 */
+  intensity?: number;
+  /**
+   * 'depth' — closer layers scale faster on zoom (pop-out effect).
+   * 'drift' — zoom parallax only affects positional offset (layers spread apart).
+   * Default: 'depth'
+   */
+  mode?: "depth" | "drift";
+}
+
 export interface InteractiveMapProps {
   layers: MapLayer[];
   /** ID of the layer to use as the viewport reference. If not provided, defaults to the layer with the lowest zIndex. */
@@ -96,4 +115,6 @@ export interface InteractiveMapProps {
   className?: string;
   panConfig?: PanConfig;
   zoomConfig?: ZoomConfig;
+  /** Enable parallax effect. If not provided, parallax is disabled. */
+  parallaxConfig?: ParallaxConfig;
 }

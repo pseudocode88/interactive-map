@@ -7,7 +7,7 @@ const layers = [
     animation: [
       {
         type: "wobble" as const,
-        offset: { x: 10, y: 0 },
+        offset: { x: 50, y: 0 },
         duration: 10
       }
     ] 
@@ -38,7 +38,8 @@ export default function Home() {
         layers={layers}
         baseLayerId="base"
         panConfig={{ enabled: true, easingFactor: 0.15 }}
-        zoomConfig={{ enabled: true, minZoom: 1, maxZoom: 2, initialZoom: 1.2 }}
+        zoomConfig={{ enabled: true, minZoom: 1, maxZoom: 2, initialZoom: 1 }}
+        parallaxConfig={{ intensity: 0.3, mode: "depth" }}
       />
     </main>
   );
