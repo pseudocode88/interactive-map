@@ -1,9 +1,10 @@
 "use client";
 
 import { Html } from "@react-three/drei";
-import { useFrame } from "@react-three/fiber";
-import type { ReactNode, RefObject } from "react";
+import { useFrame, useThree } from "@react-three/fiber";
+import type { ReactNode } from "react";
 import { useRef, useState } from "react";
+import type { OrthographicCamera } from "three";
 
 import type { MapMarker } from "../types";
 import { DefaultMarker } from "./DefaultMarker";
@@ -15,7 +16,6 @@ interface MarkerLayerProps {
   baseLayerZIndex: number;
   onMarkerClick: (markerId: string) => void;
   renderMarker?: (marker: MapMarker) => ReactNode;
-  viewportRef: RefObject<{ x: number; y: number; zoom: number }>;
 }
 
 interface MarkerItemProps {
@@ -24,7 +24,6 @@ interface MarkerItemProps {
   y: number;
   onMarkerClick: (markerId: string) => void;
   renderMarker?: (marker: MapMarker) => ReactNode;
-  viewportRef: RefObject<{ x: number; y: number; zoom: number }>;
 }
 
 function MarkerItem({
@@ -33,8 +32,8 @@ function MarkerItem({
   y,
   onMarkerClick,
   renderMarker,
-  viewportRef,
 }: MarkerItemProps) {
+  const { camera } = useThree();
   const markerRef = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = useState(false);
 
@@ -43,8 +42,13 @@ function MarkerItem({
       return;
     }
 
-    const zoom = Math.max(0.001, viewportRef.current?.zoom ?? 1);
-    const hoverScale = isHovered ? 1.3 : 1;
+    const orthoCamera = camera as OrthographicCamera;
+    const trackedZoom =
+      typeof orthoCamera.userData.interactiveMapZoom === "number"
+        ? orthoCamera.userData.interactiveMapZoom
+        : orthoCamera.zoom;
+    const zoom = Math.max(0.001, trackedZoom || 1);
+    const hoverScale = renderMarker && isHovered ? 1.3 : 1;
     markerRef.current.style.transform = `scale(${hoverScale / zoom})`;
   });
 
@@ -128,7 +132,6 @@ export function MarkerLayer({
   baseLayerZIndex,
   onMarkerClick,
   renderMarker,
-  viewportRef,
 }: MarkerLayerProps) {
   const markerLayerZ = baseLayerZIndex * 0.01 + 0.005;
 
@@ -146,7 +149,6 @@ export function MarkerLayer({
             y={worldY}
             onMarkerClick={onMarkerClick}
             renderMarker={renderMarker}
-            viewportRef={viewportRef}
           />
         );
       })}

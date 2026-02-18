@@ -130,6 +130,7 @@ export function CameraController({
     orthoCamera.right = halfW;
     orthoCamera.top = halfH;
     orthoCamera.bottom = -halfH;
+    orthoCamera.userData.interactiveMapZoom = zoom;
     orthoCamera.updateProjectionMatrix();
 
     clampTargetForZoom(
@@ -391,6 +392,7 @@ export function CameraController({
       orthoCamera.right = halfW;
       orthoCamera.top = halfH;
       orthoCamera.bottom = -halfH;
+      orthoCamera.userData.interactiveMapZoom = currentZoom.current;
       orthoCamera.updateProjectionMatrix();
     }
 

@@ -26,6 +26,8 @@ interface MapSceneProps {
   markers?: MapMarker[];
   onMarkerClick?: (markerId: string) => void;
   renderMarker?: (marker: MapMarker) => ReactNode;
+  focusTarget?: { x: number; y: number } | null;
+  onFocusComplete?: () => void;
   resetZoomTrigger?: number;
 }
 
@@ -50,6 +52,8 @@ export function MapScene({
   markers,
   onMarkerClick,
   renderMarker,
+  focusTarget: externalFocusTarget,
+  onFocusComplete,
   resetZoomTrigger,
 }: MapSceneProps) {
   const sortedLayers = useMemo(() => [...layers].sort((a, b) => a.zIndex - b.zIndex), [layers]);
@@ -58,7 +62,10 @@ export function MapScene({
   }, [markers]);
 
   const viewportRef = useRef({ x: 0, y: 0, zoom: zoomConfig.initialZoom });
-  const [focusTarget, setFocusTarget] = useState<{ x: number; y: number } | null>(null);
+  const [internalFocusTarget, setInternalFocusTarget] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
 
   const handleMarkerClick = (markerId: string) => {
     const marker = markersById.get(markerId);
@@ -66,8 +73,13 @@ export function MapScene({
       return;
     }
 
-    setFocusTarget(toWorldCoordinates(marker, baseWidth, baseHeight));
+    setInternalFocusTarget(toWorldCoordinates(marker, baseWidth, baseHeight));
     onMarkerClick?.(markerId);
+  };
+  const focusTarget = externalFocusTarget ?? internalFocusTarget;
+  const handleFocusComplete = () => {
+    setInternalFocusTarget(null);
+    onFocusComplete?.();
   };
 
   return (
@@ -78,7 +90,7 @@ export function MapScene({
         panConfig={panConfig}
         zoomConfig={zoomConfig}
         focusTarget={focusTarget}
-        onFocusComplete={() => setFocusTarget(null)}
+        onFocusComplete={handleFocusComplete}
         resetZoomTrigger={resetZoomTrigger}
         onViewportChange={(viewport) => {
           viewportRef.current = viewport;
@@ -101,35 +113,35 @@ export function MapScene({
               );
 
         return (
-          <MapLayerMesh
-            key={layer.id}
-            src={layer.src}
-            zIndex={layer.zIndex}
-            position={layer.position}
-            animation={animation}
-            baseWidth={baseWidth}
-            baseHeight={baseHeight}
-            baseFrustumHalfWidth={baseFrustumHalfWidth}
-            baseFrustumHalfHeight={baseFrustumHalfHeight}
-            minZoom={zoomConfig.minZoom}
-            maxZoom={zoomConfig.maxZoom}
-            parallaxFactor={parallaxFactor}
-            parallaxMode={parallaxConfig?.mode}
-            viewportRef={viewportRef}
-          />
+          <group key={layer.id}>
+            <MapLayerMesh
+              src={layer.src}
+              zIndex={layer.zIndex}
+              position={layer.position}
+              animation={animation}
+              baseWidth={baseWidth}
+              baseHeight={baseHeight}
+              baseFrustumHalfWidth={baseFrustumHalfWidth}
+              baseFrustumHalfHeight={baseFrustumHalfHeight}
+              minZoom={zoomConfig.minZoom}
+              maxZoom={zoomConfig.maxZoom}
+              parallaxFactor={parallaxFactor}
+              parallaxMode={parallaxConfig?.mode}
+              viewportRef={viewportRef}
+            />
+            {isBaseLayer && markers && markers.length > 0 ? (
+              <MarkerLayer
+                markers={markers}
+                baseImageWidth={baseWidth}
+                baseImageHeight={baseHeight}
+                baseLayerZIndex={baseLayerZIndex}
+                onMarkerClick={handleMarkerClick}
+                renderMarker={renderMarker}
+              />
+            ) : null}
+          </group>
         );
       })}
-      {markers && markers.length > 0 ? (
-        <MarkerLayer
-          markers={markers}
-          baseImageWidth={baseWidth}
-          baseImageHeight={baseHeight}
-          baseLayerZIndex={baseLayerZIndex}
-          onMarkerClick={handleMarkerClick}
-          renderMarker={renderMarker}
-          viewportRef={viewportRef}
-        />
-      ) : null}
     </>
   );
 }

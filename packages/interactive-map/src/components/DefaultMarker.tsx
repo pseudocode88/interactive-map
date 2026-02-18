@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 interface DefaultMarkerProps {
   color: string;
@@ -31,6 +31,9 @@ function ensureMarkerStyles() {
 }
 
 export function DefaultMarker({ color, label, isHovered }: DefaultMarkerProps) {
+  const [localHovered, setLocalHovered] = useState(false);
+  const hovered = isHovered || localHovered;
+
   useEffect(() => {
     ensureMarkerStyles();
   }, []);
@@ -38,11 +41,15 @@ export function DefaultMarker({ color, label, isHovered }: DefaultMarkerProps) {
   return (
     <div
       aria-label={label}
+      onPointerEnter={() => setLocalHovered(true)}
+      onPointerLeave={() => setLocalHovered(false)}
       style={{
         position: "relative",
         width: 14,
         height: 14,
         pointerEvents: "auto",
+        transform: `scale(${hovered ? 1.3 : 1})`,
+        transition: "transform 150ms ease",
       }}
     >
       <div
@@ -55,7 +62,7 @@ export function DefaultMarker({ color, label, isHovered }: DefaultMarkerProps) {
           borderRadius: "50%",
           transform: "translate(-50%, -50%)",
           backgroundColor: color,
-          boxShadow: `0 0 ${isHovered ? 14 : 10}px ${color}`,
+          boxShadow: `0 0 ${hovered ? 14 : 10}px ${color}`,
           transition: "box-shadow 150ms ease",
         }}
       />

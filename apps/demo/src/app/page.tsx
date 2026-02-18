@@ -86,7 +86,10 @@ export default function Home() {
       <InteractiveMap
         layers={layers}
         markers={markers}
-        onMarkerClick={(markerId) => setSelectedMarkerId(markerId)}
+        onMarkerClick={(markerId) => {
+          console.log("[demo] marker clicked:", markerId);
+          setSelectedMarkerId(markerId);
+        }}
         resetZoomTrigger={resetZoomTrigger}
         baseLayerId="base"
         panConfig={{ enabled: true, easingFactor: 0.15 }}
@@ -114,7 +117,7 @@ export default function Home() {
         <span>Selected Marker: {selectedLabel}</span>
         <button
           type="button"
-          onClick={() => setResetZoomTrigger(Date.now())}
+          onClick={() => setResetZoomTrigger((value) => value + 1)}
           style={{
             border: "none",
             borderRadius: 6,
