@@ -32,7 +32,8 @@ export function InteractiveMap({
     !baseLayer ||
     !baseSize ||
     !containerSize ||
-    containerSize.width === 0
+    containerSize.width === 0 ||
+    containerSize.height === 0
   ) {
     return (
       <div ref={containerRef} style={{ width, height }} className={className} />
@@ -58,8 +59,19 @@ export function InteractiveMap({
     easingFactor: zoomConfig?.easingFactor ?? 0.15,
   };
 
-  const halfWidth = baseSize.width / 2;
-  const halfHeight = halfWidth * (containerSize.height / containerSize.width);
+  const containerAspect = containerSize.height / containerSize.width;
+  const imageAspect = baseSize.height / baseSize.width;
+
+  let halfWidth: number;
+  let halfHeight: number;
+
+  if (containerAspect > imageAspect) {
+    halfHeight = baseSize.height / 2;
+    halfWidth = halfHeight * (containerSize.width / containerSize.height);
+  } else {
+    halfWidth = baseSize.width / 2;
+    halfHeight = halfWidth * (containerSize.height / containerSize.width);
+  }
 
   return (
     <div

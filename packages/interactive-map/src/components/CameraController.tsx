@@ -78,9 +78,19 @@ export function CameraController({
 }: CameraControllerProps) {
   const { camera, size, gl } = useThree();
   const orthoCamera = camera as OrthographicCamera;
-  const aspectRatio = size.height / size.width;
-  const baseFrustumHalfWidth = baseWidth / 2;
-  const baseFrustumHalfHeight = baseFrustumHalfWidth * aspectRatio;
+  const containerAspect = size.height / size.width;
+  const imageAspect = baseHeight / baseWidth;
+
+  let baseFrustumHalfWidth: number;
+  let baseFrustumHalfHeight: number;
+
+  if (containerAspect > imageAspect) {
+    baseFrustumHalfHeight = baseHeight / 2;
+    baseFrustumHalfWidth = baseFrustumHalfHeight * (size.width / size.height);
+  } else {
+    baseFrustumHalfWidth = baseWidth / 2;
+    baseFrustumHalfHeight = baseFrustumHalfWidth * containerAspect;
+  }
 
   const targetPosition = useRef<Point>({ x: 0, y: 0 });
   const targetZoom = useRef<number>(zoomConfig.initialZoom);
