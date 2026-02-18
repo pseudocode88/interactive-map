@@ -62,10 +62,10 @@ const layers = [
 ];
 
 const markers: MapMarker[] = [
-  { id: "castle", x: 900, y: 1280, label: "Castle", color: "#fff" },
-  { id: "village", x: 1900, y: 1040, label: "Village", color: "#fff" },
-  { id: "harbor", x: 3000, y: 1260, label: "Harbor Gate", color: "#fff" },
-  { id: "forest", x: 2250, y: 520, label: "Dark Forest", color: "#fff" },
+  { id: "castle", x: 900, y: 1280, label: "Castle", color: "#e5e5e5" },
+  { id: "village", x: 1900, y: 1040, label: "Village", color: "#e5e5e5" },
+  { id: "harbor", x: 3000, y: 1260, label: "Harbor Gate", color: "#e5e5e5" },
+  { id: "forest", x: 2250, y: 520, label: "Dark Forest", color: "#e5e5e5" },
 ];
 
 function buildMarkerMap(items: MapMarker[]) {
