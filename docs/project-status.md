@@ -63,23 +63,22 @@
 - Landscape/wide containers fit to width (overflow height, pan up/down)
 - No empty space at any screen size; works across desktop, tablet, mobile
 
+### Chunk 5: Layer Animations
+**Status:** Done
+**Plan:** [chunk-5-layer-animations-2026-02-18.md](plans/done/chunk-5-layer-animations-2026-02-18.md)
+
+- Animation types: bounce, carousel, fade, wobble
+- Parallel animation chaining (multiple animations on same layer)
+- Easing system: named presets (`linear`, `ease-in`, `ease-out`, `ease-in-out`) + custom cubic-bezier
+- Per-animation easing control
+- Carousel: wrap (seamless loop at base image bounds) or infinite mode
+- Delta accumulation for tab visibility pause (no CPU when hidden)
+- Direct mesh/material mutation in `useFrame` (zero React re-renders)
+- New files: `utils/easing.ts`, `utils/animation.ts`, `hooks/useLayerAnimation.ts`
+
 ---
 
 ## Remaining Chunks
-
-### Chunk 5: Layer Animations
-**Status:** Planning
-
-Scope:
-- Animation types: bounce, carousel, fade, wobble
-- Parallel animation chaining (multiple animations on same layer)
-- Easing system: named presets + custom cubic-bezier
-- Per-animation easing control
-- Carousel: configurable wrap (seamless loop) or infinite translate
-- Bounce: configurable direction
-- Wobble: oscillation around layer's base position
-- Fade: opacity in/out loop
-- Tab visibility pause for performance
 
 ### Chunk 6: Markers & Events
 **Status:** Not Started
@@ -113,8 +112,12 @@ packages/interactive-map/src/
 │   └── CameraController.tsx   # Pan + zoom controls (cover-fit aware)
 ├── hooks/
 │   ├── useBaseImageSize.ts     # Base image dimension detection
-│   └── useContainerSize.ts     # Container ResizeObserver
+│   ├── useContainerSize.ts     # Container ResizeObserver
+│   └── useLayerAnimation.ts    # Per-layer animation driver (useFrame)
+├── utils/
+│   ├── easing.ts               # Cubic-bezier + named preset easing
+│   └── animation.ts            # Pure animation math (bounce, carousel, fade, wobble)
 ├── types/
-│   └── index.ts                # MapLayer, InteractiveMapProps, PanConfig, ZoomConfig
+│   └── index.ts                # MapLayer, InteractiveMapProps, PanConfig, ZoomConfig, animation types
 └── index.ts                    # Barrel exports
 ```
