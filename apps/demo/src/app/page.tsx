@@ -62,10 +62,10 @@ const layers = [
 ];
 
 const markers: MapMarker[] = [
-  { id: "city-west", x: 900, y: 1280, label: "West Watchtower", color: "#ff5a5a" },
-  { id: "city-center", x: 1900, y: 1040, label: "Capital District", color: "#ffd166" },
-  { id: "city-east", x: 3000, y: 1260, label: "Harbor Gate", color: "#4cc9f0" },
-  { id: "peak-north", x: 2250, y: 520, label: "Northern Peaks", color: "#9ef01a" },
+  { id: "city-west", x: 900, y: 1280, label: "West Watchtower", color: "#333" },
+  { id: "city-center", x: 1900, y: 1040, label: "Capital District", color: "#333" },
+  { id: "city-east", x: 3000, y: 1260, label: "Harbor Gate", color: "#333" },
+  { id: "peak-north", x: 2250, y: 520, label: "Northern Peaks", color: "#333" },
 ];
 
 function buildMarkerMap(items: MapMarker[]) {
