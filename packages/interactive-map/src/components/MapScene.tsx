@@ -5,12 +5,14 @@ import type {
   MapMarker,
   PanConfig,
   ParallaxConfig,
+  SpriteEffectConfig,
   ZoomConfig,
 } from "../types";
 import { computeParallaxFactor } from "../utils/parallax";
 import { CameraController } from "./CameraController";
 import { MapLayerMesh } from "./MapLayerMesh";
 import { MarkerDot } from "./MarkerDot";
+import { SpriteEffect } from "./SpriteEffect";
 
 interface MapSceneProps {
   layers: MapLayer[];
@@ -25,6 +27,7 @@ interface MapSceneProps {
   parallaxConfig?: Required<ParallaxConfig>;
   viewportRef: RefObject<{ x: number; y: number; zoom: number }>;
   markers?: MapMarker[];
+  spriteEffects?: SpriteEffectConfig[];
   onMarkerClick?: (markerId: string) => void;
   onMarkerHoverChange?: (markerId: string | null) => void;
   focusTarget?: { x: number; y: number } | null;
@@ -47,6 +50,7 @@ export function MapScene({
   parallaxConfig,
   viewportRef,
   markers,
+  spriteEffects,
   onMarkerClick,
   onMarkerHoverChange,
   focusTarget,
@@ -111,6 +115,33 @@ export function MapScene({
             baseFrustumHalfHeight={baseFrustumHalfHeight}
             minZoom={zoomConfig.minZoom}
             maxZoom={zoomConfig.maxZoom}
+            parallaxFactor={parallaxFactor}
+            parallaxMode={parallaxConfig?.mode}
+            viewportRef={viewportRef}
+          />
+        );
+      })}
+      {(spriteEffects ?? []).map((effect) => {
+        const parallaxFactor =
+          !parallaxConfig || effect.parallaxFactor !== undefined
+            ? (effect.parallaxFactor ?? 1)
+            : computeParallaxFactor(
+                {
+                  id: effect.id,
+                  src: effect.src,
+                  zIndex: effect.zIndex ?? 10,
+                  parallaxFactor: effect.parallaxFactor,
+                },
+                baseLayerZIndex,
+                parallaxConfig.intensity
+              );
+
+        return (
+          <SpriteEffect
+            key={effect.id}
+            config={effect}
+            baseWidth={baseWidth}
+            baseHeight={baseHeight}
             parallaxFactor={parallaxFactor}
             parallaxMode={parallaxConfig?.mode}
             viewportRef={viewportRef}

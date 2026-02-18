@@ -118,6 +118,44 @@ export interface MapMarker {
   color?: string;
 }
 
+export interface SpriteEffectConfig {
+  /** Unique ID for this sprite group */
+  id: string;
+  /** URL to the sprite sheet image (PNG). Frames are auto-detected as a grid. */
+  src: string;
+  /** Maximum number of sprites visible at a time. Default: 5 */
+  maxCount?: number;
+  /** Base movement speed in pixels per second. Default: 80 */
+  speed?: number;
+  /** Random speed variance factor (0–1). Each sprite gets speed ± speed*variance. Default: 0.2 */
+  speedVariance?: number;
+  /** General direction of movement as a normalized vector. Default: { x: 1, y: 0 } (left-to-right) */
+  direction?: { x: number; y: number };
+  /** Random angle variance in degrees applied per-sprite for natural spread. Default: 15 */
+  directionVariance?: number;
+  /** Vertical oscillation config for natural flight wobble */
+  oscillation?: {
+    /** Amplitude in pixels (how far up/down the sprite wobbles). Default: 15 */
+    amplitude?: number;
+    /** Frequency: number of full wobble cycles per second. Default: 0.8 */
+    frequency?: number;
+  };
+  /** Frames per second for sprite sheet animation. Default: 8 */
+  fps?: number;
+  /** zIndex for depth ordering (same system as MapLayer). Default: 10 */
+  zIndex?: number;
+  /**
+   * Override the auto-calculated parallax factor for this sprite group.
+   * Only used when parallaxConfig is provided on the map.
+   * 1.0 = moves with camera. < 1 = slower (farther). > 1 = faster (closer).
+   */
+  parallaxFactor?: number;
+  /** Scale multiplier for individual sprites. Default: 1 */
+  scale?: number;
+  /** Opacity of sprites (0–1). Default: 1 */
+  opacity?: number;
+}
+
 export interface InteractiveMapProps {
   layers: MapLayer[];
   /** ID of the layer to use as the viewport reference. If not provided, defaults to the layer with the lowest zIndex. */
@@ -131,6 +169,8 @@ export interface InteractiveMapProps {
   parallaxConfig?: ParallaxConfig;
   /** Array of markers to display on the map */
   markers?: MapMarker[];
+  /** Array of sprite effect configurations (birds, butterflies, etc.) */
+  spriteEffects?: SpriteEffectConfig[];
   /** Called when a marker is clicked. Receives the marker ID. */
   onMarkerClick?: (markerId: string) => void;
   /**

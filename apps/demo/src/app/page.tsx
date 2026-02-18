@@ -86,6 +86,21 @@ export default function Home() {
       <InteractiveMap
         layers={layers}
         markers={markers}
+        spriteEffects={[
+          {
+            id: "birds",
+            src: "/bird.png",
+            maxCount: 4,
+            speed: 100,
+            speedVariance: 0.3,
+            direction: { x: 1, y: -0.1 },
+            directionVariance: 20,
+            oscillation: { amplitude: 12, frequency: 0.6 },
+            fps: 8,
+            zIndex: 8,
+            scale: 1,
+          },
+        ]}
         onMarkerClick={(markerId) => {
           console.log("[demo] marker clicked:", markerId);
           setSelectedMarkerId(markerId);

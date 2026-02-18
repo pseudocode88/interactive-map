@@ -11,6 +11,7 @@ export type {
   MapMarker,
   ParallaxConfig,
   PanConfig,
+  SpriteEffectConfig,
   WobbleAnimation,
   ZoomConfig,
 } from "./types";
