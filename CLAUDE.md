@@ -15,6 +15,7 @@
 - /plan-builder skill for writing the plan
 - If a plan is modified add a summary under log
 - Keep the steps in detailed so that there won't be any question asked while implementing.
+- Once the plan is written down commit the changes
 
 ## References
 - Project Brief: `/docs/project-brief.md`

@@ -67,7 +67,21 @@
 
 ## Remaining Chunks
 
-### Chunk 5: Markers & Events
+### Chunk 5: Layer Animations
+**Status:** Planning
+
+Scope:
+- Animation types: bounce, carousel, fade, wobble
+- Parallel animation chaining (multiple animations on same layer)
+- Easing system: named presets + custom cubic-bezier
+- Per-animation easing control
+- Carousel: configurable wrap (seamless loop) or infinite translate
+- Bounce: configurable direction
+- Wobble: oscillation around layer's base position
+- Fade: opacity in/out loop
+- Tab visibility pause for performance
+
+### Chunk 6: Markers & Events
 **Status:** Not Started
 
 Scope (from project brief):
@@ -77,15 +91,14 @@ Scope (from project brief):
 - Callback/event emission on marker interaction
 - Markers should scale appropriately with zoom
 
-### Chunk 6: Animated Elements
+### Chunk 7: Particle & Shader Effects
 **Status:** Not Started
 
-Scope (from project brief):
-- Support animated map elements (PNG layers or markers)
-- Bounce animation (loop)
-- Translate animation (directional loop)
-- Configurable animation parameters per element
-- Animations should work within the existing layer/rendering system
+Scope:
+- Sparkling effects (particle system with Points + BufferGeometry)
+- Fog (animated semi-transparent texture drift)
+- Flying birds / sprite sheet animation (frame-by-frame on a path)
+- Custom shader support for advanced visual effects
 
 ---
 
