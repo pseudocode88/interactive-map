@@ -11,3 +11,4 @@ On top of the map there should be markers and on click on the marker trigger an 
 ## Map Behaviour
 - Should be able to pan, but the boundaries are fixed which is calculated based on the base image
 - Should be able to zoom in and out, but the range is bounded.
+- Supports optional parallax effect where layers move at different rates during pan and zoom based on depth (zIndex), with two zoom modes: depth (scale-based) and drift (position-based).
