@@ -106,6 +106,18 @@ export interface ParallaxConfig {
   mode?: "depth" | "drift";
 }
 
+export interface MapMarker {
+  /** X position in base image pixel coordinates (0 = left edge) */
+  x: number;
+  /** Y position in base image pixel coordinates (0 = top edge) */
+  y: number;
+  id: string;
+  /** Text shown in tooltip on hover */
+  label: string;
+  /** Marker dot color (CSS color string). Default: "#ff4444" */
+  color?: string;
+}
+
 export interface InteractiveMapProps {
   layers: MapLayer[];
   /** ID of the layer to use as the viewport reference. If not provided, defaults to the layer with the lowest zIndex. */
@@ -117,4 +129,13 @@ export interface InteractiveMapProps {
   zoomConfig?: ZoomConfig;
   /** Enable parallax effect. If not provided, parallax is disabled. */
   parallaxConfig?: ParallaxConfig;
+  /** Array of markers to display on the map */
+  markers?: MapMarker[];
+  /** Called when a marker is clicked. Receives the marker ID. */
+  onMarkerClick?: (markerId: string) => void;
+  /**
+   * Increment this number to reset viewport to initial load state
+   * (initialZoom and centered pan). E.g. set to Date.now() or a counter.
+   */
+  resetZoomTrigger?: number;
 }

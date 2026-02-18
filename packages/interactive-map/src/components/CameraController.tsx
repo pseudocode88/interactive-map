@@ -12,6 +12,14 @@ interface CameraControllerProps {
   panConfig: Required<PanConfig>;
   zoomConfig: Required<ZoomConfig>;
   onViewportChange?: (viewport: { x: number; y: number; zoom: number }) => void;
+  /** When set, camera smoothly animates to this point at maxZoom. Set to null to clear. */
+  focusTarget?: { x: number; y: number } | null;
+  /** Called when the camera finishes animating to a focus target */
+  onFocusComplete?: () => void;
+  /** Called when a focus animation is interrupted by user input */
+  onFocusInterrupted?: () => void;
+  /** Increment to reset viewport to initial load state (initialZoom and centered pan). */
+  resetZoomTrigger?: number;
 }
 
 interface Point {
@@ -77,6 +85,10 @@ export function CameraController({
   panConfig,
   zoomConfig,
   onViewportChange,
+  focusTarget,
+  onFocusComplete,
+  onFocusInterrupted,
+  resetZoomTrigger,
 }: CameraControllerProps) {
   const { camera, size, gl } = useThree();
   const orthoCamera = camera as OrthographicCamera;
@@ -97,6 +109,8 @@ export function CameraController({
   const targetPosition = useRef<Point>({ x: 0, y: 0 });
   const targetZoom = useRef<number>(zoomConfig.initialZoom);
   const currentZoom = useRef<number>(zoomConfig.initialZoom);
+  const isFocusing = useRef(false);
+  const previousResetTrigger = useRef(resetZoomTrigger);
   const dragState = useRef({
     isDragging: false,
     previousScreenPoint: { x: 0, y: 0 },
@@ -108,6 +122,15 @@ export function CameraController({
     initialZoom: 1,
   });
 
+  const interruptFocus = () => {
+    if (!isFocusing.current) {
+      return;
+    }
+
+    isFocusing.current = false;
+    onFocusInterrupted?.();
+  };
+
   const applyFrustumForZoom = (zoom: number) => {
     const halfW = baseFrustumHalfWidth / zoom;
     const halfH = baseFrustumHalfHeight / zoom;
@@ -115,6 +138,7 @@ export function CameraController({
     orthoCamera.right = halfW;
     orthoCamera.top = halfH;
     orthoCamera.bottom = -halfH;
+    orthoCamera.userData.interactiveMapZoom = zoom;
     orthoCamera.updateProjectionMatrix();
 
     clampTargetForZoom(
@@ -143,6 +167,47 @@ export function CameraController({
   ]);
 
   useEffect(() => {
+    if (!focusTarget) {
+      return;
+    }
+
+    const clampedTarget = { x: focusTarget.x, y: focusTarget.y };
+    const focusZoom = zoomConfig.maxZoom;
+    const focusVisibleWidth = (baseFrustumHalfWidth / focusZoom) * 2;
+    const focusVisibleHeight = (baseFrustumHalfHeight / focusZoom) * 2;
+
+    clampTargetForZoom(
+      clampedTarget,
+      focusVisibleWidth,
+      focusVisibleHeight,
+      baseWidth,
+      baseHeight
+    );
+
+    targetPosition.current = clampedTarget;
+    targetZoom.current = focusZoom;
+    isFocusing.current = true;
+  }, [
+    baseFrustumHalfHeight,
+    baseFrustumHalfWidth,
+    baseHeight,
+    baseWidth,
+    focusTarget,
+    zoomConfig.maxZoom,
+  ]);
+
+  useEffect(() => {
+    if (resetZoomTrigger === previousResetTrigger.current) {
+      return;
+    }
+
+    previousResetTrigger.current = resetZoomTrigger;
+    targetZoom.current = zoomConfig.initialZoom;
+    targetPosition.current = { x: 0, y: 0 };
+    interruptFocus();
+  }, [resetZoomTrigger, zoomConfig.initialZoom]);
+
+  useEffect(() => {
     if (!zoomConfig.enabled) {
       return;
     }
@@ -151,6 +216,7 @@ export function CameraController({
 
     const handleWheel = (event: WheelEvent) => {
       event.preventDefault();
+      interruptFocus();
 
       const oldZoom = targetZoom.current;
       const scaleFactor = 1 - event.deltaY * zoomConfig.scrollSpeed;
@@ -198,6 +264,7 @@ export function CameraController({
   const handlePointerDown = (event: ThreeEvent<PointerEvent>) => {
     event.stopPropagation();
     capturePointer(event);
+    interruptFocus();
 
     const screenPoint = {
       x: event.nativeEvent.clientX,
@@ -230,6 +297,7 @@ export function CameraController({
     pointers.current.set(event.pointerId, screenPoint);
 
     if (pinchState.current.isPinching && pointers.current.size === 2) {
+      interruptFocus();
       const [p1, p2] = Array.from(pointers.current.values());
       const currentDistance = getDistance(p1, p2);
 
@@ -272,6 +340,8 @@ export function CameraController({
     if (!dragState.current.isDragging) {
       return;
     }
+
+    interruptFocus();
 
     const currentScreenX = event.nativeEvent.clientX;
     const currentScreenY = event.nativeEvent.clientY;
@@ -331,6 +401,7 @@ export function CameraController({
       orthoCamera.right = halfW;
       orthoCamera.top = halfH;
       orthoCamera.bottom = -halfH;
+      orthoCamera.userData.interactiveMapZoom = currentZoom.current;
       orthoCamera.updateProjectionMatrix();
     }
 
@@ -342,6 +413,17 @@ export function CameraController({
       camera.position.y += dy * panConfig.easingFactor;
     }
 
+    if (isFocusing.current) {
+      const focusDx = Math.abs(targetPosition.current.x - camera.position.x);
+      const focusDy = Math.abs(targetPosition.current.y - camera.position.y);
+      const focusZoomDiff = Math.abs(targetZoom.current - currentZoom.current);
+
+      if (focusDx < 0.5 && focusDy < 0.5 && focusZoomDiff < 0.01) {
+        isFocusing.current = false;
+        onFocusComplete?.();
+      }
+    }
+
     onViewportChange?.({
       x: camera.position.x,
       y: camera.position.y,
@@ -351,7 +433,7 @@ export function CameraController({
 
   return (
     <mesh
-      position={[0, 0, 5]}
+      position={[0, 0, -1]}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}

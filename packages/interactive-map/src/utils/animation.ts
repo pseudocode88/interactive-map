@@ -13,7 +13,7 @@ export interface AnimationResult {
   opacity: number | null;
 }
 
-function normalizeDirection(dir: { x: number; y: number }): { x: number; y: number } {
+export function normalizeDirection(dir: { x: number; y: number }): { x: number; y: number } {
   const len = Math.sqrt(dir.x * dir.x + dir.y * dir.y);
   if (len === 0) {
     return { x: 0, y: 1 };

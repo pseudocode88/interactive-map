@@ -1,7 +1,7 @@
 "use client";
 
 import { Canvas } from "@react-three/fiber";
-import { Suspense, useMemo, useRef } from "react";
+import { Suspense, useMemo, useRef, useState } from "react";
 import { NoToneMapping } from "three";
 
 import type {
@@ -13,6 +13,14 @@ import type {
 import { useBaseImageSize } from "../hooks/useBaseImageSize";
 import { useContainerSize } from "../hooks/useContainerSize";
 import { MapScene } from "./MapScene";
+import { MarkerTooltip } from "./MarkerTooltip";
+
+function toWorldCoordinates(x: number, y: number, baseWidth: number, baseHeight: number) {
+  return {
+    x: x - baseWidth / 2,
+    y: baseHeight / 2 - y,
+  };
+}
 
 export function InteractiveMap({
   layers,
@@ -23,8 +31,15 @@ export function InteractiveMap({
   panConfig,
   zoomConfig,
   parallaxConfig,
+  markers,
+  onMarkerClick,
+  resetZoomTrigger,
 }: InteractiveMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const viewportRef = useRef({ x: 0, y: 0, zoom: zoomConfig?.initialZoom ?? 1 });
+  const [focusTarget, setFocusTarget] = useState<{ x: number; y: number } | null>(null);
+  const [hoveredMarkerId, setHoveredMarkerId] = useState<string | null>(null);
+
   const baseLayer = useMemo(() => {
     if (layers.length === 0) {
       return null;
@@ -46,6 +61,11 @@ export function InteractiveMap({
 
   const baseSize = useBaseImageSize(baseLayer?.src ?? "");
   const containerSize = useContainerSize(containerRef);
+  const markersById = useMemo(
+    () => new Map((markers ?? []).map((marker) => [marker.id, marker])),
+    [markers]
+  );
+  const hoveredMarker = hoveredMarkerId ? markersById.get(hoveredMarkerId) ?? null : null;
 
   if (
     !baseLayer ||
@@ -98,12 +118,17 @@ export function InteractiveMap({
     halfHeight = halfWidth * (containerSize.height / containerSize.width);
   }
 
+  const hoveredWorldCoordinates = hoveredMarker
+    ? toWorldCoordinates(hoveredMarker.x, hoveredMarker.y, baseSize.width, baseSize.height)
+    : { x: 0, y: 0 };
+
   return (
     <div
       ref={containerRef}
       style={{
         width,
         height,
+        position: "relative",
         cursor: resolvedPanConfig.enabled ? "grab" : "default",
         touchAction: "none",
       }}
@@ -135,9 +160,41 @@ export function InteractiveMap({
             panConfig={resolvedPanConfig}
             zoomConfig={resolvedZoomConfig}
             parallaxConfig={resolvedParallaxConfig}
+            viewportRef={viewportRef}
+            markers={markers}
+            onMarkerClick={(markerId) => {
+              const marker = markersById.get(markerId);
+              if (!marker) {
+                return;
+              }
+
+              setFocusTarget(
+                toWorldCoordinates(marker.x, marker.y, baseSize.width, baseSize.height)
+              );
+              onMarkerClick?.(markerId);
+            }}
+            onMarkerHoverChange={(markerId) => {
+              setHoveredMarkerId(markerId);
+            }}
+            focusTarget={focusTarget}
+            onFocusComplete={() => setFocusTarget(null)}
+            onFocusInterrupted={() => setFocusTarget(null)}
+            resetZoomTrigger={resetZoomTrigger}
+            onViewportChange={(viewport) => {
+              viewportRef.current = viewport;
+            }}
           />
         </Suspense>
       </Canvas>
+      <MarkerTooltip
+        marker={hoveredMarker}
+        worldX={hoveredWorldCoordinates.x}
+        worldY={hoveredWorldCoordinates.y}
+        containerRef={containerRef}
+        viewportRef={viewportRef}
+        baseFrustumHalfWidth={halfWidth}
+        baseFrustumHalfHeight={halfHeight}
+      />
     </div>
   );
 }
