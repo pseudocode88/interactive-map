@@ -2,7 +2,7 @@
 Name: Layer Parallax
 Type: Feature
 Created On: 2026-02-18
-Modified On: 2026-02-18
+Modified On: 2026-02-18 (review fixes)
 ---
 
 # Brief
@@ -73,15 +73,17 @@ Create a utility module with the following functions:
    - For `"depth"` mode: return `parallaxFactor` (used to multiply the zoom level per layer).
    - For `"drift"` mode: return `1.0` (no scale difference, only positional offset).
 
-3. `computeAutoScaleFactor(parallaxFactor, maxZoom, minZoom, mode, baseWidth, baseHeight, baseFrustumHalfWidth, baseFrustumHalfHeight)`:
+3. `computeAutoScaleFactor(parallaxFactor, maxZoom, minZoom, mode, baseWidth, baseHeight, baseFrustumHalfWidth, baseFrustumHalfHeight, layerWidth, layerHeight)`:
+   - **Important:** Accepts `layerWidth` and `layerHeight` as parameters — the layer's own texture dimensions, NOT the base image size. The final ratio must divide by the layer's own size since that's what gets scaled.
    - Calculate the maximum possible pan offset for this layer at the most extreme zoom.
    - Return a scale multiplier (>= 1.0) that the layer's geometry should be enlarged by to guarantee full viewport coverage at all pan/zoom positions.
    - The logic:
      - At max zoom, the visible area is `baseFrustumHalf / maxZoom`.
      - The max pan offset for this layer relative to camera = `maxPanRange * |parallaxFactor - 1|`.
      - For depth mode, also account for the layer's effective zoom being different.
-     - The required extra coverage = `2 * maxPanOffset + visibleArea` compared to the base image size.
-     - Return `max(1.0, requiredSize / originalSize)`.
+     - The required extra coverage = `2 * maxPanOffset + visibleArea` compared to the **layer's own image size**.
+     - Return `max(1.0, requiredWidth / layerWidth, requiredHeight / layerHeight)`.
+   - **Note:** Since layer texture dimensions are only available after loading (inside `MapLayerMesh` via `useLoader`), this function should be called inside `MapLayerMesh` rather than `MapScene`.
 
 ## Step 3: Refactor Camera to Expose Viewport State
 
@@ -118,12 +120,18 @@ The parallax layers need to know the camera's current position and zoom to compu
      // ... existing props ...
      parallaxFactor?: number;       // computed factor for this layer (1.0 = no parallax)
      parallaxMode?: "depth" | "drift";
-     autoScale?: number;            // geometry scale multiplier for edge coverage
      viewportRef?: React.RefObject<{ x: number; y: number; zoom: number }>;
+     // Parallax config values needed for autoScale computation:
+     maxZoom?: number;
+     minZoom?: number;
+     baseFrustumHalfWidth?: number;
+     baseFrustumHalfHeight?: number;
    }
    ```
 
-2. **Geometry scaling:** If `autoScale` is provided and > 1.0, multiply the plane geometry dimensions by `autoScale`:
+2. **Auto-scale computation inside MapLayerMesh:** After the texture loads (via `useLoader`), compute `autoScale` using `computeAutoScaleFactor(...)` with the layer's own `textureWidth` and `textureHeight`. This ensures correct coverage regardless of whether the layer image matches the base image size.
+
+3. **Geometry scaling:** If `autoScale` is > 1.0, multiply the plane geometry dimensions by `autoScale`:
    ```ts
    const geoWidth = textureWidth * (autoScale ?? 1);
    const geoHeight = textureHeight * (autoScale ?? 1);
@@ -184,10 +192,10 @@ The parallax layers need to know the camera's current position and zoom to compu
 
 4. For each layer, compute:
    - `parallaxFactor` using `computeParallaxFactor(layer, baseLayerZIndex, resolvedIntensity)`
-   - `autoScale` using `computeAutoScaleFactor(...)` — only if parallax is enabled and factor !== 1.0
-   - Pass `parallaxFactor`, `parallaxMode`, `autoScale`, and `viewportRef` to `MapLayerMesh`.
+   - Pass `parallaxFactor`, `parallaxMode`, parallax-related zoom/frustum config, and `viewportRef` to `MapLayerMesh`.
+   - **Do NOT compute `autoScale` here** — it requires layer texture dimensions which are only available inside `MapLayerMesh` after the texture loads.
 
-5. The base layer always gets `parallaxFactor=1.0` and `autoScale=1.0`.
+5. The base layer always gets `parallaxFactor=1.0`.
 
 ## Step 6: Wire Props in InteractiveMap
 
@@ -230,6 +238,14 @@ The parallax layers need to know the camera's current position and zoom to compu
    />
    ```
 
+## Step 9: Cleanup Dead Code
+
+**File:** `packages/interactive-map/src/hooks/useLayerAnimation.ts`
+
+1. Since `MapLayerMesh` was refactored to inline animation logic (calling `computeAnimations` and `resolveEasing` directly in a `useFrame`), the `useLayerAnimation` hook is no longer imported anywhere.
+2. Delete the file `packages/interactive-map/src/hooks/useLayerAnimation.ts`.
+3. Verify no other files import from it.
+
 # Acceptance Criteria
 
 - [ ] When `parallaxConfig` is **not** provided, behavior is identical to current (no parallax, no regressions).
@@ -248,3 +264,6 @@ The parallax layers need to know the camera's current position and zoom to compu
 
 # Log
 - 2026-02-18: Plan created.
+- 2026-02-18: Post-review fixes added:
+  1. **Bug fix:** `computeAutoScaleFactor` must use layer's own texture dimensions (`layerWidth`/`layerHeight`) instead of `baseWidth`/`baseHeight` for the final ratio. Moved `autoScale` computation into `MapLayerMesh` where texture dimensions are available.
+  2. **Cleanup:** Added Step 9 to delete orphaned `useLayerAnimation` hook (replaced by inline `useFrame` logic in `MapLayerMesh`).
