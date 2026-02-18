@@ -3,7 +3,7 @@ Name: Chunk 6 - Map Markers & Interaction
 Type: Feature
 Created On: 2026-02-18
 Modified On: 2026-02-18
-Review Status: Fixes Required
+Review Status: Fixes Required (Round 2)
 ---
 
 # Brief
@@ -459,8 +459,89 @@ useEffect(() => {
 }, []);
 ```
 
+# Review Round 2 Fixes
+
+## Fix 5: Marker centering offset (Medium)
+
+**File:** `MarkerLayer.tsx`
+
+**Problem:** The marker wrapper div positions markers with `translate(screenX, screenY)` which places the top-left corner of the wrapper at the screen coordinate. The DefaultMarker's dot is centered within its 14x14 parent using `left: 50%; top: 50%; translate(-50%, -50%)`, so the visible dot appears ~7px offset from the actual world coordinate.
+
+**Fix:**
+
+In the `updateTransforms` rAF loop, add a `translate(-50%, -50%)` before the scale to center the wrapper on the screen point:
+
+```ts
+element.style.transform = `translate(${screenX}px, ${screenY}px) translate(-50%, -50%) scale(${nextHoverScale / zoom})`;
+```
+
+This centers the wrapper element on the projected screen coordinate, so the marker dot aligns precisely with the world position.
+
+---
+
+## Fix 6: Remove duplicate `markersById` (Minor)
+
+**Files:** `InteractiveMap.tsx`, `MarkerLayer.tsx`
+
+**Problem:** `markersById` is computed via `useMemo` in both `InteractiveMap.tsx` and `MarkerLayer.tsx`. Redundant computation.
+
+**Fix:**
+
+1. Remove the `markersById` useMemo from `MarkerLayer.tsx`
+2. Add `markersById` as a prop to `MarkerLayerProps`:
+   ```ts
+   markersById: Map<string, MapMarker>;
+   ```
+3. Pass it from `InteractiveMap.tsx` where it's already computed
+
+---
+
+## Fix 7: Remove dead `viewportRef` in MapScene (Minor)
+
+**File:** `MapScene.tsx`
+
+**Problem:** `MapScene` creates its own `viewportRef` on line 42 which is no longer consumed by any child — the MarkerLayer that used it now lives outside the Canvas in `InteractiveMap.tsx`. The ref and its assignment inside `onViewportChange` are dead code.
+
+**Fix:**
+
+Remove the `viewportRef` declaration and the `viewportRef.current = viewport` assignment from MapScene. The `onViewportChange` callback should just forward to the parent:
+
+```tsx
+onViewportChange={(viewport) => {
+  onViewportChange?.(viewport);
+}}
+```
+
+---
+
+## Fix 8: Stabilize rAF loop by moving hover state to ref (Minor)
+
+**File:** `MarkerLayer.tsx`
+
+**Problem:** `hoveredMarkers` state object is in the `useEffect` dependency array for the `requestAnimationFrame` loop. Every pointer enter/leave triggers a state update which tears down and restarts the rAF loop. This causes a brief frame gap on each hover.
+
+**Fix:**
+
+1. Replace `hoveredMarkers` state with a ref:
+   ```ts
+   const hoveredMarkersRef = useRef<Record<string, boolean>>({});
+   ```
+2. Update pointer enter/leave handlers to write to the ref directly:
+   ```ts
+   onPointerEnter={() => { hoveredMarkersRef.current[marker.id] = true; }}
+   onPointerLeave={() => { hoveredMarkersRef.current[marker.id] = false; }}
+   ```
+3. In the `updateTransforms` loop, read from `hoveredMarkersRef.current` instead of `hoveredMarkers`
+4. Remove `hoveredMarkers` from the `useEffect` dependency array
+5. Keep a separate `[hoveredMarkerId, setHoveredMarkerId] = useState<string | null>(null)` state **only** for triggering re-renders of the tooltip opacity (since that's controlled via inline style `opacity: isHovered ? 1 : 0`). Update this state in the pointer handlers alongside the ref write.
+
+Alternatively, if tooltip show/hide can tolerate being driven by the rAF loop (writing to the tooltip div's style directly via ref), the state can be eliminated entirely.
+
+---
+
 # Log
 
 - 2026-02-18: Created plan for Chunk 6 - Map Markers & Interaction covering marker types, default visual, marker layer, zoom-to-marker, reset zoom, and demo integration.
 - 2026-02-18: Added review fixes — 2 major (stale focusTarget on interruption, CSS transition vs useFrame conflict) and 1 minor (style tag cleanup).
 - 2026-02-18: Added Fix 3 (Critical) — replace Drei `<Html>` with custom DOM overlay to fix markers not loading and markers disappearing on zoom. Drei's internal frustum culling hides markers when their projected position is outside the camera frustum, which happens during zoom animation (zoom outruns pan) and for edge markers at initial load. Renumbered old Fix 3 to Fix 4.
+- 2026-02-18: Review Round 2 — Fixes 1-4 all implemented correctly. R3F "Div is not part of THREE namespace" error resolved by moving MarkerLayer outside Canvas. Added Fix 5 (Medium: marker centering offset), Fix 6 (Minor: duplicate markersById), Fix 7 (Minor: dead viewportRef in MapScene), Fix 8 (Minor: stabilize rAF loop). Fix 5 is the only one affecting visible behavior — markers appear ~7px off-position.
