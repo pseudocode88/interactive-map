@@ -7,7 +7,7 @@ const layers = [
     animation: [
       {
         type: "wobble" as const,
-        offset: { x: 50, y: 0 },
+        offset: { x: 0, y: 50 },
         duration: 10
       }
     ] 
@@ -29,6 +29,38 @@ const layers = [
       { type: "fade" as const, minOpacity: 0.4, maxOpacity: 1, duration: 3 },
     ],
   },
+  {
+    id: "cloud-slide-front",
+    src: "/cloud-slide-front.png",
+    zIndex: 4,
+    // position: { x: 0, y: -10 },
+    animation: [
+      {
+        type: "carousel" as const,
+        direction: { x: -1, y: 0 },
+        // amplitude: 15,
+        speed: 40,
+        easing: "ease-in-out" as const,
+      },
+      // { type: "fade" as const, minOpacity: 0.4, maxOpacity: 1, duration: 3 },
+    ],
+  },
+  {
+    id: "cloud-slide-front-2",
+    src: "/cloud-slide-front-2.png",
+    zIndex: 5,
+    // position: { x: 0, y: -10 },
+    animation: [
+      {
+        type: "carousel" as const,
+        direction: { x: -1, y: 0 },
+        // amplitude: 15,
+        speed: 10,
+        easing: "ease-in-out" as const,
+      },
+      // { type: "fade" as const, minOpacity: 0.4, maxOpacity: 1, duration: 3 },
+    ],
+  },
 ];
 
 export default function Home() {
@@ -38,7 +70,7 @@ export default function Home() {
         layers={layers}
         baseLayerId="base"
         panConfig={{ enabled: true, easingFactor: 0.15 }}
-        zoomConfig={{ enabled: true, minZoom: 1, maxZoom: 2, initialZoom: 1 }}
+        zoomConfig={{ enabled: true, minZoom: 1, maxZoom: 1.6, initialZoom: 1 }}
         parallaxConfig={{ intensity: 0.3, mode: "depth" }}
       />
     </main>
