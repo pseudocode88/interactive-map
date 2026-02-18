@@ -34,7 +34,7 @@ export function MarkerDot({
   const tooltipGroupRef = useRef<Group>(null);
   const currentScale = useRef(1);
   const [isHovered, setIsHovered] = useState(false);
-  const color = marker.color ?? "#ff4444";
+  const color = marker.color ?? "#333";
 
   const tooltipStyle = useMemo(
     () => ({
@@ -77,7 +77,7 @@ export function MarkerDot({
 
     const pulseElapsed = (state.clock.getElapsedTime() % 1.5) / 1.5;
     const pulseScale = (1 + pulseElapsed) / zoom;
-    const pulseOpacity = 0.5 * (1 - pulseElapsed);
+    const pulseOpacity = 0.6 * (1 - pulseElapsed);
     pulse.scale.setScalar(pulseScale);
     pulseMaterial.opacity = pulseOpacity;
     if (tooltipGroupRef.current) {
@@ -116,7 +116,7 @@ export function MarkerDot({
 
       <mesh ref={pulseRef} raycast={() => null}>
         <circleGeometry args={[MARKER_RADIUS, 32]} />
-        <meshBasicMaterial ref={pulseMaterialRef} color={color} transparent opacity={0.5} />
+        <meshBasicMaterial ref={pulseMaterialRef} color="#ffffff" transparent opacity={0.6} />
       </mesh>
 
       {isHovered ? (
