@@ -330,8 +330,15 @@ export interface ShaderEffectConfig {
    */
   src?: string;
   /**
+   * Coordinate space for the shader quad.
+   * - 'map': world/map space (default). Quad uses base image coordinates and parallax.
+   * - 'viewport': screen-following overlay space. Quad follows camera view and ignores map parallax.
+   */
+  space?: "map" | "viewport";
+  /**
    * Optional rectangular region in base image pixel coordinates.
    * If omitted, the shader quad covers the entire base image (baseWidth x baseHeight).
+   * Note: when `space` is "viewport", region is interpreted in viewport-local coordinates.
    */
   region?: {
     x: number;

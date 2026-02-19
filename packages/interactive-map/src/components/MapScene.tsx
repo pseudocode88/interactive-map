@@ -233,6 +233,8 @@ export function MapScene({
             config={effect}
             baseWidth={baseWidth}
             baseHeight={baseHeight}
+            baseFrustumHalfWidth={baseFrustumHalfWidth}
+            baseFrustumHalfHeight={baseFrustumHalfHeight}
             parallaxFactor={parallaxFactor}
             parallaxMode={parallaxConfig?.mode}
             viewportRef={viewportRef}

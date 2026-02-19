@@ -137,6 +137,7 @@ export default function Home() {
         shaderEffects={[
           {
             id: "vignette",
+            space: "viewport",
             fragmentShader: `
               uniform float uTime;
               uniform vec2 uResolution;
@@ -150,7 +151,7 @@ export default function Home() {
                 gl_FragColor = vec4(0.0, 0.0, 0.0, vignette * 0.4);
               }
             `,
-            zIndex: 15,
+            zIndex: 10,
           },
         ]}
         onMarkerClick={(markerId) => {

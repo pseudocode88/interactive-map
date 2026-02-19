@@ -20,6 +20,8 @@ interface ShaderEffectProps {
   config: ShaderEffectConfig;
   baseWidth: number;
   baseHeight: number;
+  baseFrustumHalfWidth: number;
+  baseFrustumHalfHeight: number;
   parallaxFactor: number;
   parallaxMode?: "depth" | "drift";
   viewportRef: RefObject<{ x: number; y: number; zoom: number }>;
@@ -33,6 +35,8 @@ function ShaderEffectInner({
   config,
   baseWidth,
   baseHeight,
+  baseFrustumHalfWidth,
+  baseFrustumHalfHeight,
   parallaxFactor,
   parallaxMode,
   viewportRef,
@@ -42,11 +46,27 @@ function ShaderEffectInner({
   const shaderMaterialRef = useRef<ShaderMaterial>(null);
   const elapsed = useRef(0);
 
-  const quadWidth = config.region ? config.region.width : baseWidth;
-  const quadHeight = config.region ? config.region.height : baseHeight;
+  const isViewportSpace = config.space === "viewport";
+  const viewportWidthAtZoomOne = baseFrustumHalfWidth * 2;
+  const viewportHeightAtZoomOne = baseFrustumHalfHeight * 2;
+
+  const quadWidth = isViewportSpace
+    ? (config.region?.width ?? viewportWidthAtZoomOne)
+    : (config.region?.width ?? baseWidth);
+  const quadHeight = isViewportSpace
+    ? (config.region?.height ?? viewportHeightAtZoomOne)
+    : (config.region?.height ?? baseHeight);
 
   const basePosition = useMemo(() => {
     if (config.region) {
+      if (isViewportSpace) {
+        return {
+          x: config.region.x + config.region.width / 2 - viewportWidthAtZoomOne / 2,
+          y:
+            viewportHeightAtZoomOne / 2 - (config.region.y + config.region.height / 2),
+        };
+      }
+
       return {
         x: config.region.x + config.region.width / 2 - baseWidth / 2,
         y: baseHeight / 2 - (config.region.y + config.region.height / 2),
@@ -54,7 +74,14 @@ function ShaderEffectInner({
     }
 
     return { x: 0, y: 0 };
-  }, [config.region, baseHeight, baseWidth]);
+  }, [
+    baseHeight,
+    baseWidth,
+    config.region,
+    isViewportSpace,
+    viewportHeightAtZoomOne,
+    viewportWidthAtZoomOne,
+  ]);
 
   const zIndex = config.zIndex ?? 12;
 
@@ -81,6 +108,14 @@ function ShaderEffectInner({
       if (uniforms.uTexture && texture) {
         uniforms.uTexture.value = texture;
       }
+    }
+
+    if (isViewportSpace) {
+      const safeZoom = Math.max(0.001, viewport.zoom);
+      meshRef.current.position.x = viewport.x + basePosition.x / safeZoom;
+      meshRef.current.position.y = viewport.y + basePosition.y / safeZoom;
+      meshRef.current.scale.set(1 / safeZoom, 1 / safeZoom, 1);
+      return;
     }
 
     const panOffsetX = viewport.x * (1 - parallaxFactor);
