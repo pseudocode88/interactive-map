@@ -138,7 +138,7 @@ export default function Home() {
           {
             id: "water-overlay",
             preset: "waterRipple",
-            presetParams: { uSpeed: 0.8, uAmplitude: 0.015 },
+            presetParams: { uSpeed: 1, uAmplitude: 0.1 },
             zIndex: 9,
             space: "viewport",
           },
