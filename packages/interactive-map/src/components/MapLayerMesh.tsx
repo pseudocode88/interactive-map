@@ -1,14 +1,24 @@
 import { useFrame, useLoader } from "@react-three/fiber";
 import type { RefObject } from "react";
 import { useMemo, useRef } from "react";
-import { LinearFilter, Mesh, SRGBColorSpace, TextureLoader } from "three";
-import type { CarouselAnimation, LayerAnimation } from "../types";
+import {
+  LinearFilter,
+  Mesh,
+  SRGBColorSpace,
+  ShaderMaterial,
+  TextureLoader,
+} from "three";
+import type { CarouselAnimation, LayerAnimation, LayerShaderConfig } from "../types";
 import { computeAnimations, normalizeDirection } from "../utils/animation";
 import { resolveEasing } from "../utils/easing";
 import {
   computeAutoScaleFactor,
   computeParallaxScale,
 } from "../utils/parallax";
+import {
+  buildLayerShaderUniforms,
+  DEFAULT_LAYER_VERTEX_SHADER,
+} from "../utils/shaderDefaults";
 
 interface MapLayerMeshProps {
   src: string;
@@ -27,6 +37,7 @@ interface MapLayerMeshProps {
   parallaxFactor?: number;
   parallaxMode?: "depth" | "drift";
   viewportRef?: RefObject<{ x: number; y: number; zoom: number }>;
+  shaderConfig?: LayerShaderConfig;
 }
 
 export function MapLayerMesh({
@@ -43,10 +54,13 @@ export function MapLayerMesh({
   parallaxFactor = 1,
   parallaxMode = "depth",
   viewportRef,
+  shaderConfig,
 }: MapLayerMeshProps) {
   const texture = useLoader(TextureLoader, src);
   const meshRef = useRef<Mesh>(null);
   const cloneRef = useRef<Mesh>(null);
+  const shaderMaterialRef = useRef<ShaderMaterial>(null);
+  const cloneShaderMaterialRef = useRef<ShaderMaterial>(null);
   const elapsed = useRef(0);
   const textureWidth = texture.image.width;
   const textureHeight = texture.image.height;
@@ -93,6 +107,19 @@ export function MapLayerMesh({
 
     return texture;
   }, [autoScale, texture]);
+
+  const shaderUniforms = useMemo(() => {
+    if (!shaderConfig) {
+      return null;
+    }
+
+    return buildLayerShaderUniforms(
+      processedTexture,
+      textureWidth,
+      textureHeight,
+      shaderConfig.uniforms
+    );
+  }, [processedTexture, shaderConfig, textureHeight, textureWidth]);
 
   const resolvedEasings = useMemo(
     () =>
@@ -177,9 +204,16 @@ export function MapLayerMesh({
     }
 
     if (animationResult.opacity !== null) {
-      const material = meshRef.current.material;
-      if ("opacity" in material) {
-        material.opacity = animationResult.opacity;
+      if (shaderMaterialRef.current) {
+        if (shaderMaterialRef.current.uniforms.uOpacity) {
+          shaderMaterialRef.current.uniforms.uOpacity.value = animationResult.opacity;
+        }
+        shaderMaterialRef.current.opacity = animationResult.opacity;
+      } else {
+        const material = meshRef.current.material;
+        if ("opacity" in material) {
+          material.opacity = animationResult.opacity;
+        }
       }
     }
 
@@ -190,11 +224,39 @@ export function MapLayerMesh({
       cloneRef.current.scale.copy(meshRef.current.scale);
 
       if (animationResult.opacity !== null) {
-        const cloneMaterial = cloneRef.current.material;
-        if ("opacity" in cloneMaterial) {
-          cloneMaterial.opacity = animationResult.opacity;
+        if (cloneShaderMaterialRef.current) {
+          if (cloneShaderMaterialRef.current.uniforms.uOpacity) {
+            cloneShaderMaterialRef.current.uniforms.uOpacity.value = animationResult.opacity;
+          }
+          cloneShaderMaterialRef.current.opacity = animationResult.opacity;
+        } else {
+          const cloneMaterial = cloneRef.current.material;
+          if ("opacity" in cloneMaterial) {
+            cloneMaterial.opacity = animationResult.opacity;
+          }
         }
       }
+    }
+
+    if (shaderMaterialRef.current && shaderUniforms) {
+      shaderUniforms.uTime.value = elapsed.current;
+      shaderUniforms.uViewport.value = [viewport.x, viewport.y, viewport.zoom];
+      shaderUniforms.uResolution.value = [textureWidth, textureHeight];
+      shaderUniforms.uTexture.value = processedTexture;
+
+      const materialUniforms = shaderMaterialRef.current.uniforms;
+      materialUniforms.uTime.value = shaderUniforms.uTime.value;
+      materialUniforms.uViewport.value = shaderUniforms.uViewport.value;
+      materialUniforms.uResolution.value = shaderUniforms.uResolution.value;
+      materialUniforms.uTexture.value = shaderUniforms.uTexture.value;
+    }
+
+    if (cloneShaderMaterialRef.current && shaderUniforms) {
+      const materialUniforms = cloneShaderMaterialRef.current.uniforms;
+      materialUniforms.uTime.value = shaderUniforms.uTime.value;
+      materialUniforms.uViewport.value = shaderUniforms.uViewport.value;
+      materialUniforms.uResolution.value = shaderUniforms.uResolution.value;
+      materialUniforms.uTexture.value = shaderUniforms.uTexture.value;
     }
   });
 
@@ -202,12 +264,34 @@ export function MapLayerMesh({
     <>
       <mesh ref={meshRef} position={[basePosition.x, basePosition.y, zIndex * 0.01]}>
         <planeGeometry args={[geoWidth, geoHeight]} />
-        <meshBasicMaterial map={processedTexture} transparent />
+        {shaderConfig && shaderUniforms ? (
+          <shaderMaterial
+            ref={shaderMaterialRef}
+            vertexShader={shaderConfig.vertexShader ?? DEFAULT_LAYER_VERTEX_SHADER}
+            fragmentShader={shaderConfig.fragmentShader}
+            uniforms={shaderUniforms}
+            transparent={shaderConfig.transparent ?? true}
+            depthWrite={shaderConfig.depthWrite ?? false}
+          />
+        ) : (
+          <meshBasicMaterial map={processedTexture} transparent />
+        )}
       </mesh>
       {hasCarousel ? (
         <mesh ref={cloneRef} position={[basePosition.x, basePosition.y, zIndex * 0.01]}>
           <planeGeometry args={[geoWidth, geoHeight]} />
-          <meshBasicMaterial map={processedTexture} transparent />
+          {shaderConfig && shaderUniforms ? (
+            <shaderMaterial
+              ref={cloneShaderMaterialRef}
+              vertexShader={shaderConfig.vertexShader ?? DEFAULT_LAYER_VERTEX_SHADER}
+              fragmentShader={shaderConfig.fragmentShader}
+              uniforms={shaderUniforms}
+              transparent={shaderConfig.transparent ?? true}
+              depthWrite={shaderConfig.depthWrite ?? false}
+            />
+          ) : (
+            <meshBasicMaterial map={processedTexture} transparent />
+          )}
         </mesh>
       ) : null}
     </>

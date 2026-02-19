@@ -10,6 +10,7 @@ export type {
   FogScaleBreathing,
   InteractiveMapProps,
   LayerAnimation,
+  LayerShaderConfig,
   MapLayer,
   MapMarker,
   ParticleEffectConfig,

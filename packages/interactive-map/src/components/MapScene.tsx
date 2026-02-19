@@ -117,6 +117,7 @@ export function MapScene({
             zIndex={layer.zIndex}
             position={layer.position}
             animation={animation}
+            shaderConfig={layer.shaderConfig}
             baseWidth={baseWidth}
             baseHeight={baseHeight}
             baseFrustumHalfWidth={baseFrustumHalfWidth}

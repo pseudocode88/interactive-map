@@ -61,6 +61,45 @@ export type LayerAnimation =
   | FadeAnimation
   | WobbleAnimation;
 
+/**
+ * Custom shader configuration for a map layer.
+ * When provided, the layer uses ShaderMaterial instead of meshBasicMaterial.
+ *
+ * Auto-injected uniforms available in shaders:
+ * - uTime (float): elapsed time in seconds
+ * - uResolution (vec2): texture dimensions (width, height) in pixels
+ * - uTexture (sampler2D): the layer's loaded texture
+ * - uViewport (vec3): camera state (x, y, zoom)
+ */
+export interface LayerShaderConfig {
+  /** GLSL vertex shader source. If omitted, a default passthrough vertex shader is used. */
+  vertexShader?: string;
+  /** GLSL fragment shader source. Required. */
+  fragmentShader: string;
+  /**
+   * Additional custom uniforms to pass to the shader.
+   * Values can be numbers, arrays (vec2/vec3/vec4), or Three.js objects (Color, Texture, etc.).
+   * These are merged with the auto-injected uniforms (uTime, uResolution, uTexture, uViewport).
+   * If a custom uniform name collides with an auto-injected one, the custom value takes precedence.
+   */
+  uniforms?: Record<string, { value: unknown }>;
+  /** Whether the material should use transparent blending. Default: true */
+  transparent?: boolean;
+  /** Whether to write to the depth buffer. Default: false */
+  depthWrite?: boolean;
+  /**
+   * Optional preset name (for Chunk 7d-3). When set, vertexShader/fragmentShader are ignored
+   * and the preset's shaders are used instead.
+   * Reserved for future use - not implemented in this chunk.
+   */
+  preset?: string;
+  /**
+   * Optional preset-specific parameters (for Chunk 7d-3).
+   * Reserved for future use - not implemented in this chunk.
+   */
+  presetParams?: Record<string, unknown>;
+}
+
 export interface MapLayer {
   id: string;
   src: string;
@@ -79,6 +118,8 @@ export interface MapLayer {
    * Only used when parallaxConfig is provided on the map.
    */
   parallaxFactor?: number;
+  /** Optional custom shader configuration. When provided, the layer renders with ShaderMaterial instead of meshBasicMaterial. */
+  shaderConfig?: LayerShaderConfig;
 }
 
 export interface PanConfig {
