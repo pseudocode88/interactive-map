@@ -554,3 +554,4 @@ This step is optional — only add if there is a suitable place in the demo. If 
 # Log
 
 - **2026-02-19 (Created):** Initial plan for Chunk 7d-2 — Standalone Shader Effects. Covers types (`ShaderEffectConfig`), standalone uniform builder utility, `ShaderEffect` component with conditional texture loading (wrapper pattern), fullscreen and region-based quad sizing, auto-injected uniforms (`uTime`, `uResolution`, `uViewport`, optional `uTexture`), parallax integration (depth + drift), MapScene/InteractiveMap wiring, barrel exports, and optional demo with procedural vignette shader.
+- **2026-02-19 (Implementation):** Implementation added `space: "map" | "viewport"` option beyond original plan. Viewport-space mode makes the shader quad follow the camera (screen-fixed overlay), useful for vignettes, HUD effects, etc. Quad scales inversely with zoom to maintain consistent screen coverage.

@@ -161,18 +161,21 @@
 - `utils/shaderDefaults.ts` helper
 - Separate uniforms objects for main mesh and carousel clone
 
+### Chunk 7d-2: Standalone Shader Effects
+**Status:** Done
+**Plan:** [chunk-7d-2-standalone-shader-effects-2026-02-19.md](plans/done/chunk-7d-2-standalone-shader-effects-2026-02-19.md)
+
+- `ShaderEffectConfig` type and `ShaderEffect` component
+- Fullscreen (base image) or region-based shader quad
+- Optional texture loading via `src` (injected as `uTexture`)
+- Auto-injected uniforms: `uTime`, `uResolution`, `uViewport`
+- Two coordinate spaces: `map` (default, parallax-aware) and `viewport` (screen-fixed overlay)
+- `buildStandaloneShaderUniforms` utility + barrel exports
+- Conditional texture loading via wrapper component pattern
+
 ---
 
 ## Remaining Chunks
-
-### Chunk 7d-2: Standalone Shader Effects
-**Status:** Not Started
-
-Scope:
-- New `ShaderEffectConfig` type and `ShaderEffect` component
-- Fullscreen or region-based shader quad (like FogEffect/ParticleEffect)
-- Integrated into `MapScene` with parallax support
-- Auto-injected uniforms (`uTime`, `uResolution`, `uViewport`)
 
 ### Chunk 7d-3: Built-in Shader Presets
 **Status:** Not Started
@@ -198,7 +201,8 @@ packages/interactive-map/src/
 │   ├── MarkerTooltip.tsx       # Hover tooltip for markers
 │   ├── SpriteEffect.tsx        # Animated sprite sheet effects (birds, butterflies, etc.)
 │   ├── FogEffect.tsx           # Animated fog overlay with tiling, opacity pulse, scale breathing
-│   └── ParticleEffect.tsx     # GPU particle system (twinkle/drift) with custom ShaderMaterial
+│   ├── ParticleEffect.tsx      # GPU particle system (twinkle/drift) with custom ShaderMaterial
+│   └── ShaderEffect.tsx        # Standalone shader quad (map-space or viewport-space)
 ├── hooks/
 │   ├── useBaseImageSize.ts     # Base image dimension detection
 │   └── useContainerSize.ts     # Container ResizeObserver
@@ -212,6 +216,6 @@ packages/interactive-map/src/
 │   ├── particles.ts            # Pure particle math (twinkle/drift lifecycle)
 │   └── shaderDefaults.ts       # Default vertex shader + auto-injected uniform builder
 ├── types/
-│   └── index.ts                # MapLayer, MapMarker, LayerShaderConfig, SpriteEffectConfig, FogEffectConfig, ParticleEffectConfig, InteractiveMapProps, etc.
+│   └── index.ts                # MapLayer, MapMarker, LayerShaderConfig, ShaderEffectConfig, SpriteEffectConfig, FogEffectConfig, ParticleEffectConfig, InteractiveMapProps, etc.
 └── index.ts                    # Barrel exports
 ```
