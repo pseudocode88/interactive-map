@@ -327,6 +327,7 @@ export default function Home() {
           maxZoom: 1.6,
           initialZoom: 1.1,
           animateIntroZoom: true,
+          introZoomDelayMs: 700,
         }}
         parallaxConfig={{ intensity: 0.3, mode: "depth" }}
       />

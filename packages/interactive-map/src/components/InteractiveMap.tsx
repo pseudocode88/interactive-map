@@ -56,12 +56,41 @@ function InteractiveMapContent({
   const [focusTarget, setFocusTarget] = useState<{ x: number; y: number } | null>(null);
   const [hoveredMarkerId, setHoveredMarkerId] = useState<string | null>(null);
   const [loadingFadeComplete, setLoadingFadeComplete] = useState(!shouldShowLoadingScreen);
+  const [introZoomReady, setIntroZoomReady] = useState(false);
+  const shouldRunIntroZoom =
+    (zoomConfig?.animateIntroZoom ?? false) && shouldShowLoadingScreen;
+  const introZoomDelayMs = Math.max(0, zoomConfig?.introZoomDelayMs ?? 0);
 
   useEffect(() => {
     if (!shouldShowLoadingScreen) {
       setLoadingFadeComplete(true);
     }
   }, [shouldShowLoadingScreen]);
+
+  useEffect(() => {
+    if (!shouldRunIntroZoom) {
+      setIntroZoomReady(true);
+      return;
+    }
+
+    if (!loadingFadeComplete) {
+      setIntroZoomReady(false);
+      return;
+    }
+
+    if (introZoomDelayMs === 0) {
+      setIntroZoomReady(true);
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setIntroZoomReady(true);
+    }, introZoomDelayMs);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [introZoomDelayMs, loadingFadeComplete, shouldRunIntroZoom]);
 
   const baseLayer = useMemo(() => {
     if (layers.length === 0) {
@@ -119,16 +148,18 @@ function InteractiveMapContent({
     maxZoom: resolvedMaxZoom,
     initialZoom: resolvedInitialZoom,
     animateIntroZoom: zoomConfig?.animateIntroZoom ?? false,
+    introZoomDelayMs,
     scrollSpeed: zoomConfig?.scrollSpeed ?? 0.001,
     easingFactor: zoomConfig?.easingFactor ?? 0.15,
     focusEasingFactor: zoomConfig?.focusEasingFactor ?? 0.05,
   };
-  const introZoomActive = resolvedZoomConfig.animateIntroZoom && !loadingFadeComplete;
+
+  const introZoomActive = shouldRunIntroZoom && !introZoomReady;
   const effectiveZoomConfig = introZoomActive
     ? { ...resolvedZoomConfig, initialZoom: resolvedMinZoom }
     : resolvedZoomConfig;
   const introZoomTrigger =
-    resolvedZoomConfig.animateIntroZoom && loadingFadeComplete ? 1 : 0;
+    shouldRunIntroZoom && introZoomReady ? 1 : 0;
   const resolvedParallaxConfig: Required<ParallaxConfig> | undefined = parallaxConfig
     ? {
         intensity: parallaxConfig.intensity ?? 0.3,

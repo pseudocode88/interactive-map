@@ -198,6 +198,8 @@ export interface ZoomConfig {
   initialZoom?: number;
   /** When true, camera starts at minZoom and animates to initialZoom after loading completes. Default: false */
   animateIntroZoom?: boolean;
+  /** Delay in milliseconds after loading fade completes before intro zoom starts. Default: 0 */
+  introZoomDelayMs?: number;
   scrollSpeed?: number;
   easingFactor?: number;
   /** Easing factor used during programmatic animations (marker focus & reset). Lower = slower/smoother. Default: 0.05 */
