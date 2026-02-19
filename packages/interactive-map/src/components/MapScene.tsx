@@ -90,7 +90,7 @@ export function MapScene({
   }, [layers]);
   const resolvedMaskEffects = useMemo(() => {
     if (!maskEffects || maskEffects.length === 0) {
-      return { shaderEffects: [], particleEffects: [] };
+      return { shaderEffects: [], particleEffects: [], pinnedEffects: new Map() };
     }
     return resolveAllMaskEffects(maskEffects);
   }, [maskEffects]);
@@ -131,6 +131,7 @@ export function MapScene({
                 baseLayerZIndex,
                 parallaxConfig.intensity
               );
+        const layerPinnedEffects = resolvedMaskEffects.pinnedEffects.get(layer.id);
 
         return (
           <MapLayerMesh
@@ -149,6 +150,7 @@ export function MapScene({
             parallaxFactor={parallaxFactor}
             parallaxMode={parallaxConfig?.mode}
             viewportRef={viewportRef}
+            pinnedEffects={layerPinnedEffects}
           />
         );
       })}

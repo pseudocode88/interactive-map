@@ -488,6 +488,18 @@ export interface MaskEffectConfig {
   id: string;
   /** URL to the RGB mask image (PNG) */
   src: string;
+  /**
+   * Pin this mask effect group to a specific map layer by its ID.
+   * When set, effects become children of the layer's mesh in the scene graph,
+   * inheriting all transforms: parallax, pan, zoom scaling, carousel, and animations.
+   * The mask image dimensions should match the pinned layer's image dimensions.
+   *
+   * When pinnedTo is set, these fields are ignored (inherited from the layer):
+   * - space (always "map")
+   * - parallaxFactor (inherited from layer)
+   * - zIndex (rendered as child of the layer mesh)
+   */
+  pinnedTo?: string;
   /** Effect to apply on the red channel regions */
   red?: MaskChannelEffect;
   /** Effect to apply on the green channel regions */
@@ -513,6 +525,92 @@ export interface MaskEffectConfig {
   maskBehavior?: "spawn" | "constrain" | "both";
   /** Minimum mask channel value threshold. Default: 0.1 */
   maskThreshold?: number;
+}
+
+/**
+ * Internal config for a shader effect pinned to a layer.
+ * Similar to ShaderEffectConfig but without positioning/parallax fields.
+ * These are rendered as children of a MapLayerMesh.
+ */
+export interface PinnedShaderEffectConfig {
+  /** Unique ID for this pinned shader effect */
+  id: string;
+  /** Built-in shader preset name */
+  preset?: ShaderPresetName;
+  /** Preset-specific parameters */
+  presetParams?: Record<string, unknown>;
+  /** Custom fragment shader (used when preset is not set) */
+  fragmentShader?: string;
+  /** Custom vertex shader */
+  vertexShader?: string;
+  /** Additional custom uniforms */
+  uniforms?: Record<string, { value: unknown }>;
+  /** Optional texture URL for the shader */
+  src?: string;
+  /** Mask texture URL */
+  maskSrc?: string;
+  /** Mask channel to sample */
+  maskChannel?: MaskChannel;
+  /** Whether the material uses transparent blending. Default: true */
+  transparent?: boolean;
+  /** Z-offset within the parent layer (0.001 increments). Default: 0.001 */
+  localZOffset?: number;
+}
+
+/**
+ * Internal config for a particle effect pinned to a layer.
+ * Similar to ParticleEffectConfig but without positioning/parallax fields.
+ * Particle positions are computed in layer-local coordinates.
+ */
+export interface PinnedParticleEffectConfig {
+  /** Unique ID for this pinned particle effect */
+  id: string;
+  /** Visual mode. Default: "twinkle" */
+  mode?: "twinkle" | "drift";
+  /** Maximum particle count. Default: 50 */
+  maxCount?: number;
+  /** Particle color (CSS string). Default: "#ffffff" */
+  color?: string;
+  /** Base particle size in pixels. Default: 3 */
+  size?: number;
+  /** Size variance factor (0-1). Default: 0.3 */
+  sizeVariance?: number;
+  /** Optional particle texture URL */
+  src?: string;
+  /** Twinkle duration in seconds. Default: 2 */
+  twinkleDuration?: number;
+  /** Twinkle duration variance (0-1). Default: 0.5 */
+  twinkleDurationVariance?: number;
+  /** Drift direction as normalized vector. Default: { x: 0, y: 1 } */
+  driftDirection?: { x: number; y: number };
+  /** Drift direction variance in degrees. Default: 15 */
+  driftDirectionVariance?: number;
+  /** Drift speed in px/s. Default: 30 */
+  driftSpeed?: number;
+  /** Drift speed variance (0-1). Default: 0.3 */
+  driftSpeedVariance?: number;
+  /** Drift distance in px. Default: 100 */
+  driftDistance?: number;
+  /** Base opacity (0-1). Default: 1 */
+  opacity?: number;
+  /** Mask texture URL */
+  maskSrc?: string;
+  /** Mask channel to sample */
+  maskChannel?: MaskChannel;
+  /** Mask behavior. Default: "both" */
+  maskBehavior?: "spawn" | "constrain" | "both";
+  /** Mask threshold. Default: 0.1 */
+  maskThreshold?: number;
+  /** Z-offset within the parent layer (0.001 increments). Default: 0.002 */
+  localZOffset?: number;
+}
+
+/**
+ * Collection of pinned effects to render as children of a map layer mesh.
+ */
+export interface PinnedEffects {
+  shaderEffects: PinnedShaderEffectConfig[];
+  particleEffects: PinnedParticleEffectConfig[];
 }
 
 export interface InteractiveMapProps {

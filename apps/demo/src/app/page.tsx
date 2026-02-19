@@ -202,6 +202,30 @@ export default function Home() {
             space: "map",
             maskBehavior: "both",
           },
+          {
+            id: "cloud-front-pinned-effects",
+            src: "/maps/demo-mask.png",
+            pinnedTo: "cloud-front",
+            red: {
+              preset: "waterRipple",
+              presetParams: { uSpeed: 0.8, uAmplitude: 0.015 },
+            },
+            green: {
+              type: "particles",
+              config: {
+                mode: "twinkle",
+                maxCount: 40,
+                color: "#9af9ff",
+                size: 4,
+                twinkleDuration: 2.5,
+              },
+            },
+            blue: {
+              preset: "glow",
+              presetParams: { uIntensity: 0.55, uGlowColor: [0.35, 0.9, 1.0] },
+            },
+            maskBehavior: "both",
+          },
         ]}
         onMarkerClick={(markerId) => {
           console.log("[demo] marker clicked:", markerId);

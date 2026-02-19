@@ -16,6 +16,11 @@ import type { ParticleEffectConfig } from "../types";
 import { useMaskSampler } from "../hooks/useMaskSampler";
 import { computeParallaxScale } from "../utils/parallax";
 import {
+  PARTICLE_FRAGMENT_SHADER_CIRCLE,
+  PARTICLE_FRAGMENT_SHADER_TEXTURE,
+  PARTICLE_VERTEX_SHADER,
+} from "../utils/particleShaders";
+import {
   createMaskedParticle,
   initializeMaskedParticles,
   initializeParticles,
@@ -45,43 +50,6 @@ interface ParticleRegion {
   width: number;
   height: number;
 }
-
-const VERTEX_SHADER = `
-attribute float alpha;
-attribute float particleSize;
-varying float vAlpha;
-
-uniform float uOpacity;
-
-void main() {
-  vAlpha = alpha * uOpacity;
-  vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-  gl_Position = projectionMatrix * mvPosition;
-  gl_PointSize = particleSize;
-}
-`;
-
-const FRAGMENT_SHADER_CIRCLE = `
-uniform vec3 uColor;
-varying float vAlpha;
-
-void main() {
-  vec2 center = gl_PointCoord - vec2(0.5);
-  if (dot(center, center) > 0.25) discard;
-  gl_FragColor = vec4(uColor, vAlpha);
-}
-`;
-
-const FRAGMENT_SHADER_TEXTURE = `
-uniform vec3 uColor;
-uniform sampler2D uTexture;
-varying float vAlpha;
-
-void main() {
-  vec4 texColor = texture2D(uTexture, gl_PointCoord);
-  gl_FragColor = vec4(uColor * texColor.rgb, texColor.a * vAlpha);
-}
-`;
 
 function clampDimension(value: number): number {
   return Math.max(1, value);
@@ -429,8 +397,8 @@ export function ParticleEffect({
       </bufferGeometry>
       <shaderMaterial
         ref={materialRef}
-        vertexShader={VERTEX_SHADER}
-        fragmentShader={texture ? FRAGMENT_SHADER_TEXTURE : FRAGMENT_SHADER_CIRCLE}
+        vertexShader={PARTICLE_VERTEX_SHADER}
+        fragmentShader={texture ? PARTICLE_FRAGMENT_SHADER_TEXTURE : PARTICLE_FRAGMENT_SHADER_CIRCLE}
         uniforms={uniforms}
         transparent
         depthWrite={false}

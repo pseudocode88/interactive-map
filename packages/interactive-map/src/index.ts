@@ -9,7 +9,14 @@ export { useMaskTexture } from "./hooks/useMaskTexture";
 export { useMaskSampler } from "./hooks/useMaskSampler";
 export { resolveAllMaskEffects, resolveMaskEffects } from "./utils/maskEffectResolver";
 export { resolveShaderPreset } from "./utils/shaderPresets";
+export { PinnedShaderEffect } from "./components/PinnedShaderEffect";
+export { PinnedParticleEffect } from "./components/PinnedParticleEffect";
 export { createMaskSampler, loadMaskSampler, type MaskSampler } from "./utils/maskSampler";
+export {
+  PARTICLE_VERTEX_SHADER,
+  PARTICLE_FRAGMENT_SHADER_CIRCLE,
+  PARTICLE_FRAGMENT_SHADER_TEXTURE,
+} from "./utils/particleShaders";
 export {
   createMaskedParticle,
   initializeMaskedParticles,
@@ -38,6 +45,9 @@ export type {
   MapLayer,
   MapMarker,
   ParticleEffectConfig,
+  PinnedEffects,
+  PinnedParticleEffectConfig,
+  PinnedShaderEffectConfig,
   ParallaxConfig,
   PanConfig,
   ShaderEffectConfig,

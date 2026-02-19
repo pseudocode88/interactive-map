@@ -8,7 +8,12 @@ import {
   ShaderMaterial,
   TextureLoader,
 } from "three";
-import type { CarouselAnimation, LayerAnimation, LayerShaderConfig } from "../types";
+import type {
+  CarouselAnimation,
+  LayerAnimation,
+  LayerShaderConfig,
+  PinnedEffects,
+} from "../types";
 import { useMaskTexture } from "../hooks/useMaskTexture";
 import { computeAnimations, normalizeDirection } from "../utils/animation";
 import { resolveEasing } from "../utils/easing";
@@ -16,6 +21,8 @@ import {
   computeAutoScaleFactor,
   computeParallaxScale,
 } from "../utils/parallax";
+import { PinnedParticleEffect } from "./PinnedParticleEffect";
+import { PinnedShaderEffect } from "./PinnedShaderEffect";
 import {
   buildMaskUniforms,
   buildLayerShaderUniforms,
@@ -40,8 +47,10 @@ interface MapLayerMeshProps {
   maxZoom: number;
   parallaxFactor?: number;
   parallaxMode?: "depth" | "drift";
-  viewportRef?: RefObject<{ x: number; y: number; zoom: number }>;
+  viewportRef: RefObject<{ x: number; y: number; zoom: number }>;
   shaderConfig?: LayerShaderConfig;
+  /** Pinned effects to render as children of this layer's mesh */
+  pinnedEffects?: PinnedEffects;
 }
 
 export function MapLayerMesh({
@@ -59,6 +68,7 @@ export function MapLayerMesh({
   parallaxMode = "depth",
   viewportRef,
   shaderConfig,
+  pinnedEffects,
 }: MapLayerMeshProps) {
   const texture = useLoader(TextureLoader, src);
   const meshRef = useRef<Mesh>(null);
@@ -343,6 +353,24 @@ export function MapLayerMesh({
         ) : (
           <meshBasicMaterial map={processedTexture} transparent />
         )}
+        {pinnedEffects?.shaderEffects.map((effect) => (
+          <PinnedShaderEffect
+            key={effect.id}
+            config={effect}
+            geoWidth={geoWidth}
+            geoHeight={geoHeight}
+            viewportRef={viewportRef}
+          />
+        ))}
+        {pinnedEffects?.particleEffects.map((effect) => (
+          <PinnedParticleEffect
+            key={effect.id}
+            config={effect}
+            geoWidth={geoWidth}
+            geoHeight={geoHeight}
+            viewportRef={viewportRef}
+          />
+        ))}
       </mesh>
       {hasCarousel ? (
         <mesh ref={cloneRef} position={[basePosition.x, basePosition.y, zIndex * 0.01]}>
@@ -359,6 +387,24 @@ export function MapLayerMesh({
           ) : (
             <meshBasicMaterial map={processedTexture} transparent />
           )}
+          {pinnedEffects?.shaderEffects.map((effect) => (
+            <PinnedShaderEffect
+              key={`${effect.id}-clone`}
+              config={effect}
+              geoWidth={geoWidth}
+              geoHeight={geoHeight}
+              viewportRef={viewportRef}
+            />
+          ))}
+          {pinnedEffects?.particleEffects.map((effect) => (
+            <PinnedParticleEffect
+              key={`${effect.id}-clone`}
+              config={effect}
+              geoWidth={geoWidth}
+              geoHeight={geoHeight}
+              viewportRef={viewportRef}
+            />
+          ))}
         </mesh>
       ) : null}
     </>
