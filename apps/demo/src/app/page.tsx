@@ -58,25 +58,7 @@ const layers = [
       },
       { type: "fade" as const, minOpacity: 0.6, maxOpacity: 1, duration: 3 }
     ],
-  },
-  {
-    id: "shader-demo",
-    src: "/overlay-cloud-back.png",
-    zIndex: 6,
-    shaderConfig: {
-      fragmentShader: `
-      uniform sampler2D uTexture;
-      uniform float uTime;
-      varying vec2 vUv;
-
-      void main() {
-        vec4 color = texture2D(uTexture, vUv);
-        color.r *= 0.5 + 0.5 * sin(uTime);
-        gl_FragColor = color;
-      }
-      `,
-    },
-  },
+  }
 ];
 
 const markers: MapMarker[] = [
