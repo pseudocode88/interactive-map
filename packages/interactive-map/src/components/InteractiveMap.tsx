@@ -1,7 +1,7 @@
 "use client";
 
 import { Canvas } from "@react-three/fiber";
-import { Suspense, useMemo, useRef, useState } from "react";
+import { Suspense, useContext, useMemo, useRef, useState } from "react";
 import { NoToneMapping } from "three";
 
 import type {
@@ -10,8 +10,14 @@ import type {
   ParallaxConfig,
   ZoomConfig,
 } from "../types";
+import {
+  LoadingManagerContext,
+  LoadingManagerProvider,
+} from "../context/LoadingManagerContext";
 import { useBaseImageSize } from "../hooks/useBaseImageSize";
 import { useContainerSize } from "../hooks/useContainerSize";
+import { LoadingManagerBridge } from "./LoadingManagerBridge";
+import { LoadingOverlay } from "./LoadingOverlay";
 import { MapScene } from "./MapScene";
 import { MarkerTooltip } from "./MarkerTooltip";
 
@@ -22,7 +28,7 @@ function toWorldCoordinates(x: number, y: number, baseWidth: number, baseHeight:
   };
 }
 
-export function InteractiveMap({
+function InteractiveMapContent({
   layers,
   baseLayerId,
   width = "100%",
@@ -39,7 +45,12 @@ export function InteractiveMap({
   maskEffects,
   onMarkerClick,
   resetZoomTrigger,
+  loadingMessages,
+  loadingStyle,
+  showLoadingScreen,
 }: InteractiveMapProps) {
+  const loadingManager = useContext(LoadingManagerContext);
+  const shouldShowLoadingScreen = showLoadingScreen !== false;
   const containerRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef({ x: 0, y: 0, zoom: zoomConfig?.initialZoom ?? 1 });
   const [focusTarget, setFocusTarget] = useState<{ x: number; y: number } | null>(null);
@@ -153,49 +164,54 @@ export function InteractiveMap({
         gl={{ antialias: true, toneMapping: NoToneMapping }}
         style={{ width: "100%", height: "100%" }}
       >
-        <Suspense fallback={null}>
-          <MapScene
-            layers={layers}
-            baseWidth={baseSize.width}
-            baseHeight={baseSize.height}
-            baseFrustumHalfWidth={halfWidth}
-            baseFrustumHalfHeight={halfHeight}
-            baseLayerId={baseLayer.id}
-            baseLayerZIndex={baseLayer.zIndex}
-            panConfig={resolvedPanConfig}
-            zoomConfig={resolvedZoomConfig}
-            parallaxConfig={resolvedParallaxConfig}
-            viewportRef={viewportRef}
-            markers={markers}
-            spriteEffects={spriteEffects}
-            fogEffects={fogEffects}
-            particleEffects={particleEffects}
-            shaderEffects={shaderEffects}
-            maskEffects={maskEffects}
-            onMarkerClick={(markerId) => {
-              const marker = markersById.get(markerId);
-              if (!marker) {
-                return;
-              }
+        <LoadingManagerBridge manager={loadingManager}>
+          <Suspense fallback={null}>
+            <MapScene
+              layers={layers}
+              baseWidth={baseSize.width}
+              baseHeight={baseSize.height}
+              baseFrustumHalfWidth={halfWidth}
+              baseFrustumHalfHeight={halfHeight}
+              baseLayerId={baseLayer.id}
+              baseLayerZIndex={baseLayer.zIndex}
+              panConfig={resolvedPanConfig}
+              zoomConfig={resolvedZoomConfig}
+              parallaxConfig={resolvedParallaxConfig}
+              viewportRef={viewportRef}
+              markers={markers}
+              spriteEffects={spriteEffects}
+              fogEffects={fogEffects}
+              particleEffects={particleEffects}
+              shaderEffects={shaderEffects}
+              maskEffects={maskEffects}
+              onMarkerClick={(markerId) => {
+                const marker = markersById.get(markerId);
+                if (!marker) {
+                  return;
+                }
 
-              setFocusTarget(
-                toWorldCoordinates(marker.x, marker.y, baseSize.width, baseSize.height)
-              );
-              onMarkerClick?.(markerId);
-            }}
-            onMarkerHoverChange={(markerId) => {
-              setHoveredMarkerId(markerId);
-            }}
-            focusTarget={focusTarget}
-            onFocusComplete={() => setFocusTarget(null)}
-            onFocusInterrupted={() => setFocusTarget(null)}
-            resetZoomTrigger={resetZoomTrigger}
-            onViewportChange={(viewport) => {
-              viewportRef.current = viewport;
-            }}
-          />
-        </Suspense>
+                setFocusTarget(
+                  toWorldCoordinates(marker.x, marker.y, baseSize.width, baseSize.height)
+                );
+                onMarkerClick?.(markerId);
+              }}
+              onMarkerHoverChange={(markerId) => {
+                setHoveredMarkerId(markerId);
+              }}
+              focusTarget={focusTarget}
+              onFocusComplete={() => setFocusTarget(null)}
+              onFocusInterrupted={() => setFocusTarget(null)}
+              resetZoomTrigger={resetZoomTrigger}
+              onViewportChange={(viewport) => {
+                viewportRef.current = viewport;
+              }}
+            />
+          </Suspense>
+        </LoadingManagerBridge>
       </Canvas>
+      {shouldShowLoadingScreen && loadingManager ? (
+        <LoadingOverlay messages={loadingMessages} loadingStyle={loadingStyle} />
+      ) : null}
       <MarkerTooltip
         marker={hoveredMarker}
         worldX={hoveredWorldCoordinates.x}
@@ -206,5 +222,17 @@ export function InteractiveMap({
         baseFrustumHalfHeight={halfHeight}
       />
     </div>
+  );
+}
+
+export function InteractiveMap(props: InteractiveMapProps) {
+  if (props.showLoadingScreen === false) {
+    return <InteractiveMapContent {...props} />;
+  }
+
+  return (
+    <LoadingManagerProvider>
+      <InteractiveMapContent {...props} />
+    </LoadingManagerProvider>
   );
 }

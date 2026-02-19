@@ -647,6 +647,14 @@ export interface PinnedEffects {
   particleEffects: PinnedParticleEffectConfig[];
 }
 
+export interface LoadingStyleConfig {
+  barColor?: string;
+  backgroundColor?: string;
+  textColor?: string;
+  barHeight?: number;
+  font?: string;
+}
+
 export interface InteractiveMapProps {
   layers: MapLayer[];
   /** ID of the layer to use as the viewport reference. If not provided, defaults to the layer with the lowest zIndex. */
@@ -672,6 +680,12 @@ export interface InteractiveMapProps {
   maskEffects?: MaskEffectConfig[];
   /** Called when a marker is clicked. Receives the marker ID. */
   onMarkerClick?: (markerId: string) => void;
+  /** Optional custom milestone messages shown in the loading overlay. */
+  loadingMessages?: string[];
+  /** Optional style overrides for the loading overlay. */
+  loadingStyle?: LoadingStyleConfig;
+  /** Controls loading screen visibility. Defaults to true. */
+  showLoadingScreen?: boolean;
   /**
    * Increment this number to reset viewport to initial load state
    * (initialZoom and centered pan). E.g. set to Date.now() or a counter.

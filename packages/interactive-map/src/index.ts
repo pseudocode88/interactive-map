@@ -37,6 +37,7 @@ export type {
   InteractiveMapProps,
   LayerAnimation,
   LayerShaderConfig,
+  LoadingStyleConfig,
   MaskChannelEffect,
   MaskChannelParticleEffect,
   MaskChannelShaderEffect,

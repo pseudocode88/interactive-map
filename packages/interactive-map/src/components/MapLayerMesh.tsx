@@ -1,6 +1,6 @@
 import { useFrame, useLoader } from "@react-three/fiber";
 import type { RefObject } from "react";
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import {
   LinearFilter,
   Mesh,
@@ -51,6 +51,11 @@ interface MapLayerMeshProps {
   shaderConfig?: LayerShaderConfig;
   /** Pinned effects to render as children of this layer's mesh */
   pinnedEffects?: PinnedEffects;
+  onTextureLoaded?: () => void;
+  onMaskOperationLoaded?: (operationId: string) => void;
+  pinnedShaderMaskTextureOperationIds?: Record<string, string>;
+  pinnedParticleMaskSamplerOperationIds?: Record<string, string>;
+  layerMaskTextureOperationId?: string;
 }
 
 export function MapLayerMesh({
@@ -69,6 +74,11 @@ export function MapLayerMesh({
   viewportRef,
   shaderConfig,
   pinnedEffects,
+  onTextureLoaded,
+  onMaskOperationLoaded,
+  pinnedShaderMaskTextureOperationIds,
+  pinnedParticleMaskSamplerOperationIds,
+  layerMaskTextureOperationId,
 }: MapLayerMeshProps) {
   const texture = useLoader(TextureLoader, src);
   const meshRef = useRef<Mesh>(null);
@@ -76,7 +86,12 @@ export function MapLayerMesh({
   const shaderMaterialRef = useRef<ShaderMaterial>(null);
   const cloneShaderMaterialRef = useRef<ShaderMaterial>(null);
   const elapsed = useRef(0);
-  const maskTexture = useMaskTexture(shaderConfig?.maskSrc);
+  const maskTexture = useMaskTexture(
+    shaderConfig?.maskSrc,
+    layerMaskTextureOperationId && onMaskOperationLoaded
+      ? () => onMaskOperationLoaded(layerMaskTextureOperationId)
+      : undefined
+  );
   const maskChannel = shaderConfig?.maskChannel ?? "r";
   const hasMask = !!maskTexture;
   const textureWidth = texture.image.width;
@@ -237,6 +252,10 @@ export function MapLayerMesh({
     y: position?.y ?? 0,
   };
 
+  useEffect(() => {
+    onTextureLoaded?.();
+  }, [onTextureLoaded]);
+
   useFrame((_, delta) => {
     if (!meshRef.current) {
       return;
@@ -360,6 +379,8 @@ export function MapLayerMesh({
             geoWidth={geoWidth}
             geoHeight={geoHeight}
             viewportRef={viewportRef}
+            maskTextureOperationId={pinnedShaderMaskTextureOperationIds?.[effect.id]}
+            onMaskTextureLoaded={onMaskOperationLoaded}
           />
         ))}
         {pinnedEffects?.particleEffects.map((effect) => (
@@ -368,6 +389,8 @@ export function MapLayerMesh({
             config={effect}
             geoWidth={geoWidth}
             geoHeight={geoHeight}
+            maskSamplerOperationId={pinnedParticleMaskSamplerOperationIds?.[effect.id]}
+            onMaskSamplerLoaded={onMaskOperationLoaded}
           />
         ))}
       </mesh>
@@ -393,6 +416,8 @@ export function MapLayerMesh({
               geoWidth={geoWidth}
               geoHeight={geoHeight}
               viewportRef={viewportRef}
+              maskTextureOperationId={pinnedShaderMaskTextureOperationIds?.[effect.id]}
+              onMaskTextureLoaded={onMaskOperationLoaded}
             />
           ))}
           {/* Pinned effects on the clone have independent particle state (different random positions).
@@ -403,6 +428,8 @@ export function MapLayerMesh({
               config={effect}
               geoWidth={geoWidth}
               geoHeight={geoHeight}
+              maskSamplerOperationId={pinnedParticleMaskSamplerOperationIds?.[effect.id]}
+              onMaskSamplerLoaded={onMaskOperationLoaded}
             />
           ))}
         </mesh>

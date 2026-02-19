@@ -1,11 +1,17 @@
+import { useFrame } from "@react-three/fiber";
 import type { RefObject } from "react";
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
+import {
+  LoadingStage,
+} from "../context/LoadingManagerContext";
+import { useLoadingManager } from "../hooks/useLoadingManager";
 import type {
   FogEffectConfig,
   MapLayer,
   MapMarker,
   MaskEffectConfig,
   ParticleEffectConfig,
+  PinnedEffects,
   PanConfig,
   ParallaxConfig,
   ShaderEffectConfig,
@@ -49,6 +55,10 @@ interface MapSceneProps {
   onViewportChange?: (viewport: { x: number; y: number; zoom: number }) => void;
 }
 
+function countOperationIdsByLayer(mapByLayer: Record<string, Record<string, string>>): number {
+  return Object.values(mapByLayer).reduce((count, item) => count + Object.keys(item).length, 0);
+}
+
 export function MapScene({
   layers,
   baseWidth,
@@ -75,6 +85,7 @@ export function MapScene({
   resetZoomTrigger,
   onViewportChange,
 }: MapSceneProps) {
+  const { registerStage, updateStageProgress, completeStage } = useLoadingManager();
   const stableHoverChange = useCallback(
     (markerId: string | null) => onMarkerHoverChange?.(markerId),
     [onMarkerHoverChange]
@@ -88,9 +99,13 @@ export function MapScene({
     const maxLayerZIndex = Math.max(...layers.map((layer) => layer.zIndex));
     return maxLayerZIndex * 0.01 + 0.01;
   }, [layers]);
-  const resolvedMaskEffects = useMemo(() => {
+  const resolvedMaskEffects = useMemo<ReturnType<typeof resolveAllMaskEffects>>(() => {
     if (!maskEffects || maskEffects.length === 0) {
-      return { shaderEffects: [], particleEffects: [], pinnedEffects: new Map() };
+      return {
+        shaderEffects: [],
+        particleEffects: [],
+        pinnedEffects: new Map<string, PinnedEffects>(),
+      };
     }
     return resolveAllMaskEffects(maskEffects);
   }, [maskEffects]);
@@ -102,6 +117,194 @@ export function MapScene({
     () => [...(particleEffects ?? []), ...resolvedMaskEffects.particleEffects],
     [particleEffects, resolvedMaskEffects.particleEffects]
   );
+
+  const layerMaskTextureOperationIds = useMemo(
+    () =>
+      Object.fromEntries(
+        sortedLayers
+          .filter((layer) => !!layer.shaderConfig?.maskSrc)
+          .map((layer) => [layer.id, `layer-mask:${layer.id}`])
+      ),
+    [sortedLayers]
+  );
+  const shaderMaskTextureOperationIds = useMemo(
+    () =>
+      Object.fromEntries(
+        allShaderEffects
+          .filter((effect) => !!effect.maskSrc)
+          .map((effect) => [effect.id, `shader-mask:${effect.id}`])
+      ),
+    [allShaderEffects]
+  );
+  const particleMaskSamplerOperationIds = useMemo(
+    () =>
+      Object.fromEntries(
+        allParticleEffects
+          .filter((effect) => !!effect.maskSrc)
+          .map((effect) => [effect.id, `particle-mask:${effect.id}`])
+      ),
+    [allParticleEffects]
+  );
+  const pinnedShaderMaskTextureOperationIdsByLayer = useMemo(() => {
+    const result: Record<string, Record<string, string>> = {};
+
+    for (const layer of sortedLayers) {
+      const layerPinnedEffects = resolvedMaskEffects.pinnedEffects.get(layer.id);
+      if (!layerPinnedEffects) {
+        continue;
+      }
+
+      const layerResult = Object.fromEntries(
+        layerPinnedEffects.shaderEffects
+          .filter((effect) => !!effect.maskSrc)
+          .map((effect) => [effect.id, `pinned-shader-mask:${layer.id}:${effect.id}`])
+      );
+
+      if (Object.keys(layerResult).length > 0) {
+        result[layer.id] = layerResult;
+      }
+    }
+
+    return result;
+  }, [resolvedMaskEffects.pinnedEffects, sortedLayers]);
+  const pinnedParticleMaskSamplerOperationIdsByLayer = useMemo(() => {
+    const result: Record<string, Record<string, string>> = {};
+
+    for (const layer of sortedLayers) {
+      const layerPinnedEffects = resolvedMaskEffects.pinnedEffects.get(layer.id);
+      if (!layerPinnedEffects) {
+        continue;
+      }
+
+      const layerResult = Object.fromEntries(
+        layerPinnedEffects.particleEffects
+          .filter((effect) => !!effect.maskSrc)
+          .map((effect) => [effect.id, `pinned-particle-mask:${layer.id}:${effect.id}`])
+      );
+
+      if (Object.keys(layerResult).length > 0) {
+        result[layer.id] = layerResult;
+      }
+    }
+
+    return result;
+  }, [resolvedMaskEffects.pinnedEffects, sortedLayers]);
+
+  const totalLayerCount = sortedLayers.length;
+  const totalParticleCount = allParticleEffects.length;
+  const totalMaskOperationCount =
+    Object.keys(layerMaskTextureOperationIds).length +
+    Object.keys(shaderMaskTextureOperationIds).length +
+    Object.keys(particleMaskSamplerOperationIds).length +
+    countOperationIdsByLayer(pinnedShaderMaskTextureOperationIdsByLayer) +
+    countOperationIdsByLayer(pinnedParticleMaskSamplerOperationIdsByLayer);
+
+  const loadedLayerIdsRef = useRef(new Set<string>());
+  const loadedMaskOperationIdsRef = useRef(new Set<string>());
+  const loadedParticleIdsRef = useRef(new Set<string>());
+
+  useEffect(() => {
+    loadedLayerIdsRef.current.clear();
+    registerStage(LoadingStage.LAYER_TEXTURES, "Loading map layers");
+
+    if (totalLayerCount === 0) {
+      completeStage(LoadingStage.LAYER_TEXTURES);
+      return;
+    }
+
+    updateStageProgress(LoadingStage.LAYER_TEXTURES, 0);
+  }, [completeStage, registerStage, totalLayerCount, updateStageProgress]);
+
+  useEffect(() => {
+    loadedMaskOperationIdsRef.current.clear();
+    registerStage(LoadingStage.MASK_TEXTURES, "Applying masks");
+
+    if (totalMaskOperationCount === 0) {
+      completeStage(LoadingStage.MASK_TEXTURES);
+      return;
+    }
+
+    updateStageProgress(LoadingStage.MASK_TEXTURES, 0);
+  }, [completeStage, registerStage, totalMaskOperationCount, updateStageProgress]);
+
+  useEffect(() => {
+    loadedParticleIdsRef.current.clear();
+    registerStage(LoadingStage.PARTICLE_INIT, "Initializing particles");
+
+    if (totalParticleCount === 0) {
+      completeStage(LoadingStage.PARTICLE_INIT);
+      return;
+    }
+
+    updateStageProgress(LoadingStage.PARTICLE_INIT, 0);
+  }, [completeStage, registerStage, totalParticleCount, updateStageProgress]);
+
+  useEffect(() => {
+    registerStage(LoadingStage.FIRST_FRAME, "Rendering first frame");
+    updateStageProgress(LoadingStage.FIRST_FRAME, 0);
+  }, [registerStage, updateStageProgress]);
+
+  const handleLayerTextureLoaded = useCallback(
+    (layerId: string) => {
+      if (loadedLayerIdsRef.current.has(layerId)) {
+        return;
+      }
+
+      loadedLayerIdsRef.current.add(layerId);
+      const nextProgress = loadedLayerIdsRef.current.size / Math.max(1, totalLayerCount);
+      updateStageProgress(LoadingStage.LAYER_TEXTURES, nextProgress);
+
+      if (loadedLayerIdsRef.current.size >= totalLayerCount) {
+        completeStage(LoadingStage.LAYER_TEXTURES);
+      }
+    },
+    [completeStage, totalLayerCount, updateStageProgress]
+  );
+
+  const handleMaskOperationLoaded = useCallback(
+    (operationId: string) => {
+      if (!operationId || loadedMaskOperationIdsRef.current.has(operationId)) {
+        return;
+      }
+
+      loadedMaskOperationIdsRef.current.add(operationId);
+      const nextProgress =
+        loadedMaskOperationIdsRef.current.size / Math.max(1, totalMaskOperationCount);
+      updateStageProgress(LoadingStage.MASK_TEXTURES, nextProgress);
+
+      if (loadedMaskOperationIdsRef.current.size >= totalMaskOperationCount) {
+        completeStage(LoadingStage.MASK_TEXTURES);
+      }
+    },
+    [completeStage, totalMaskOperationCount, updateStageProgress]
+  );
+
+  const handleParticleReady = useCallback(
+    (particleId: string) => {
+      if (loadedParticleIdsRef.current.has(particleId)) {
+        return;
+      }
+
+      loadedParticleIdsRef.current.add(particleId);
+      const nextProgress = loadedParticleIdsRef.current.size / Math.max(1, totalParticleCount);
+      updateStageProgress(LoadingStage.PARTICLE_INIT, nextProgress);
+
+      if (loadedParticleIdsRef.current.size >= totalParticleCount) {
+        completeStage(LoadingStage.PARTICLE_INIT);
+      }
+    },
+    [completeStage, totalParticleCount, updateStageProgress]
+  );
+
+  const firstFrameReportedRef = useRef(false);
+  useFrame(() => {
+    if (firstFrameReportedRef.current) {
+      return;
+    }
+
+    firstFrameReportedRef.current = true;
+    completeStage(LoadingStage.FIRST_FRAME);
+  });
 
   return (
     <>
@@ -151,6 +354,15 @@ export function MapScene({
             parallaxMode={parallaxConfig?.mode}
             viewportRef={viewportRef}
             pinnedEffects={layerPinnedEffects}
+            onTextureLoaded={() => handleLayerTextureLoaded(layer.id)}
+            onMaskOperationLoaded={handleMaskOperationLoaded}
+            layerMaskTextureOperationId={layerMaskTextureOperationIds[layer.id]}
+            pinnedShaderMaskTextureOperationIds={
+              pinnedShaderMaskTextureOperationIdsByLayer[layer.id]
+            }
+            pinnedParticleMaskSamplerOperationIds={
+              pinnedParticleMaskSamplerOperationIdsByLayer[layer.id]
+            }
           />
         );
       })}
@@ -229,6 +441,9 @@ export function MapScene({
             parallaxMode={parallaxConfig?.mode}
             viewportRef={viewportRef}
             layerOffset={layerOffset}
+            onParticleReady={() => handleParticleReady(particle.id)}
+            onMaskSamplerLoaded={handleMaskOperationLoaded}
+            maskSamplerOperationId={particleMaskSamplerOperationIds[particle.id]}
           />
         );
       })}
@@ -258,6 +473,8 @@ export function MapScene({
             parallaxFactor={parallaxFactor}
             parallaxMode={parallaxConfig?.mode}
             viewportRef={viewportRef}
+            onMaskTextureLoaded={handleMaskOperationLoaded}
+            maskTextureOperationId={shaderMaskTextureOperationIds[effect.id]}
           />
         );
       })}

@@ -40,6 +40,8 @@ interface PinnedParticleEffectProps {
   geoWidth: number;
   /** Height of the parent layer's geometry (includes autoScale) */
   geoHeight: number;
+  onMaskSamplerLoaded?: (operationId: string) => void;
+  maskSamplerOperationId?: string;
 }
 
 function wrapCoordinate(value: number, size: number): number {
@@ -76,6 +78,8 @@ export function PinnedParticleEffect({
   config,
   geoWidth,
   geoHeight,
+  onMaskSamplerLoaded,
+  maskSamplerOperationId,
 }: PinnedParticleEffectProps) {
   const pointsRef = useRef<Points>(null);
   const materialRef = useRef<ShaderMaterial>(null);
@@ -89,7 +93,12 @@ export function PinnedParticleEffect({
   const mode = config.mode ?? "twinkle";
   const opacity = config.opacity ?? 1;
   const localZOffset = config.localZOffset ?? 0.002;
-  const maskSampler = useMaskSampler(config.maskSrc);
+  const maskSampler = useMaskSampler(
+    config.maskSrc,
+    maskSamplerOperationId && onMaskSamplerLoaded
+      ? () => onMaskSamplerLoaded(maskSamplerOperationId)
+      : undefined
+  );
   const maskChannel = config.maskChannel ?? "r";
   const maskBehavior = config.maskBehavior ?? "both";
   const maskThreshold = config.maskThreshold ?? 0.1;

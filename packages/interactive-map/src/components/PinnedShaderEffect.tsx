@@ -27,6 +27,8 @@ interface PinnedShaderEffectProps {
   geoHeight: number;
   /** Viewport ref for uViewport uniform */
   viewportRef: RefObject<{ x: number; y: number; zoom: number }>;
+  onMaskTextureLoaded?: (operationId: string) => void;
+  maskTextureOperationId?: string;
 }
 
 interface PinnedShaderEffectInnerProps extends PinnedShaderEffectProps {
@@ -39,11 +41,18 @@ function PinnedShaderEffectInner({
   geoHeight,
   viewportRef,
   texture,
+  onMaskTextureLoaded,
+  maskTextureOperationId,
 }: PinnedShaderEffectInnerProps) {
   const meshRef = useRef<Mesh>(null);
   const shaderMaterialRef = useRef<ShaderMaterial>(null);
   const elapsed = useRef(0);
-  const maskTexture = useMaskTexture(config.maskSrc);
+  const maskTexture = useMaskTexture(
+    config.maskSrc,
+    maskTextureOperationId && onMaskTextureLoaded
+      ? () => onMaskTextureLoaded(maskTextureOperationId)
+      : undefined
+  );
   const maskChannel = config.maskChannel ?? "r";
   const hasMask = !!maskTexture;
   const localZOffset = config.localZOffset ?? 0.001;

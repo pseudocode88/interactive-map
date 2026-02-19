@@ -86,6 +86,18 @@ export default function Home() {
       <InteractiveMap
         layers={layers}
         markers={markers}
+        loadingMessages={[
+          "Unrolling the map...",
+          "Painting the terrain...",
+          "Summoning creatures...",
+          "Lighting the torches...",
+          "Adventure awaits...",
+        ]}
+        loadingStyle={{
+          barColor: "#c8a860",
+          backgroundColor: "rgba(10, 8, 5, 0.9)",
+          textColor: "#d4c5a0",
+        }}
         spriteEffects={[
           {
             id: "birds",

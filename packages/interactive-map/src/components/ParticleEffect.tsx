@@ -47,6 +47,9 @@ interface ParticleEffectProps {
   viewportRef: RefObject<{ x: number; y: number; zoom: number }>;
   /** Offset from the attached layer's position (0,0 if no layer attachment) */
   layerOffset: { x: number; y: number };
+  onParticleReady?: () => void;
+  onMaskSamplerLoaded?: (operationId: string) => void;
+  maskSamplerOperationId?: string;
 }
 
 interface ParticleRegion {
@@ -134,6 +137,9 @@ export function ParticleEffect({
   parallaxMode,
   viewportRef,
   layerOffset,
+  onParticleReady,
+  onMaskSamplerLoaded,
+  maskSamplerOperationId,
 }: ParticleEffectProps) {
   const pointsRef = useRef<Points>(null);
   const materialRef = useRef<ShaderMaterial>(null);
@@ -147,7 +153,12 @@ export function ParticleEffect({
   const mode = config.mode ?? "twinkle";
   const zIndex = config.zIndex ?? 11;
   const opacity = config.opacity ?? 1;
-  const maskSampler = useMaskSampler(config.maskSrc);
+  const maskSampler = useMaskSampler(
+    config.maskSrc,
+    maskSamplerOperationId && onMaskSamplerLoaded
+      ? () => onMaskSamplerLoaded(maskSamplerOperationId)
+      : undefined
+  );
   const maskChannel = config.maskChannel ?? "r";
   const maskBehavior = config.maskBehavior ?? "spawn";
   const maskThreshold = config.maskThreshold ?? 0.1;
@@ -219,10 +230,12 @@ export function ParticleEffect({
         maskChannel,
         maskThreshold
       );
+      onParticleReady?.();
       return;
     }
 
     particlesRef.current = initializeParticles(config, initialRegion.width, initialRegion.height, maxCount);
+    onParticleReady?.();
   }, [
     baseFrustumHalfHeight,
     baseFrustumHalfWidth,
@@ -256,6 +269,7 @@ export function ParticleEffect({
     maskSampler,
     maskThreshold,
     viewportRef,
+    onParticleReady,
   ]);
 
   const uniforms = useMemo(() => {

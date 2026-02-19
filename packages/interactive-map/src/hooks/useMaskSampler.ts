@@ -6,12 +6,21 @@ import { loadMaskSampler, type MaskSampler } from "../utils/maskSampler";
  * Returns null while loading or if no src is provided.
  * Disposes the sampler on unmount or when src changes.
  */
-export function useMaskSampler(src?: string): MaskSampler | null {
+export function useMaskSampler(src?: string, onLoadComplete?: () => void): MaskSampler | null {
   const [sampler, setSampler] = useState<MaskSampler | null>(null);
 
   useEffect(() => {
+    let hasReported = false;
+    const reportComplete = () => {
+      if (!hasReported) {
+        hasReported = true;
+        onLoadComplete?.();
+      }
+    };
+
     if (!src) {
       setSampler(null);
+      reportComplete();
       return;
     }
 
@@ -26,10 +35,12 @@ export function useMaskSampler(src?: string): MaskSampler | null {
         }
         loadedSampler = nextSampler;
         setSampler(nextSampler);
+        reportComplete();
       })
       .catch(() => {
         if (!cancelled) {
           setSampler(null);
+          reportComplete();
         }
       });
 
@@ -40,7 +51,7 @@ export function useMaskSampler(src?: string): MaskSampler | null {
       }
       setSampler(null);
     };
-  }, [src]);
+  }, [onLoadComplete, src]);
 
   return sampler;
 }

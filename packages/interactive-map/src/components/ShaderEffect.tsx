@@ -29,6 +29,8 @@ interface ShaderEffectProps {
   parallaxFactor: number;
   parallaxMode?: "depth" | "drift";
   viewportRef: RefObject<{ x: number; y: number; zoom: number }>;
+  onMaskTextureLoaded?: (operationId: string) => void;
+  maskTextureOperationId?: string;
 }
 
 interface ShaderEffectInnerProps extends ShaderEffectProps {
@@ -45,11 +47,18 @@ function ShaderEffectInner({
   parallaxMode,
   viewportRef,
   texture,
+  onMaskTextureLoaded,
+  maskTextureOperationId,
 }: ShaderEffectInnerProps) {
   const meshRef = useRef<Mesh>(null);
   const shaderMaterialRef = useRef<ShaderMaterial>(null);
   const elapsed = useRef(0);
-  const maskTexture = useMaskTexture(config.maskSrc);
+  const maskTexture = useMaskTexture(
+    config.maskSrc,
+    maskTextureOperationId && onMaskTextureLoaded
+      ? () => onMaskTextureLoaded(maskTextureOperationId)
+      : undefined
+  );
   const maskChannel = config.maskChannel ?? "r";
   const hasMask = !!maskTexture;
 
