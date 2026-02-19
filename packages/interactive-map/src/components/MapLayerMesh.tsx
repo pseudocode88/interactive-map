@@ -121,6 +121,19 @@ export function MapLayerMesh({
     );
   }, [processedTexture, shaderConfig, textureHeight, textureWidth]);
 
+  const cloneShaderUniforms = useMemo(() => {
+    if (!shaderConfig) {
+      return null;
+    }
+
+    return buildLayerShaderUniforms(
+      processedTexture,
+      textureWidth,
+      textureHeight,
+      shaderConfig.uniforms
+    );
+  }, [processedTexture, shaderConfig, textureHeight, textureWidth]);
+
   const resolvedEasings = useMemo(
     () =>
       (animation ?? []).map((item) =>
@@ -238,25 +251,20 @@ export function MapLayerMesh({
       }
     }
 
-    if (shaderMaterialRef.current && shaderUniforms) {
-      shaderUniforms.uTime.value = elapsed.current;
-      shaderUniforms.uViewport.value = [viewport.x, viewport.y, viewport.zoom];
-      shaderUniforms.uResolution.value = [textureWidth, textureHeight];
-      shaderUniforms.uTexture.value = processedTexture;
-
+    if (shaderMaterialRef.current) {
       const materialUniforms = shaderMaterialRef.current.uniforms;
-      materialUniforms.uTime.value = shaderUniforms.uTime.value;
-      materialUniforms.uViewport.value = shaderUniforms.uViewport.value;
-      materialUniforms.uResolution.value = shaderUniforms.uResolution.value;
-      materialUniforms.uTexture.value = shaderUniforms.uTexture.value;
+      materialUniforms.uTime.value = elapsed.current;
+      materialUniforms.uViewport.value = [viewport.x, viewport.y, viewport.zoom];
+      materialUniforms.uResolution.value = [textureWidth, textureHeight];
+      materialUniforms.uTexture.value = processedTexture;
     }
 
-    if (cloneShaderMaterialRef.current && shaderUniforms) {
+    if (cloneShaderMaterialRef.current) {
       const materialUniforms = cloneShaderMaterialRef.current.uniforms;
-      materialUniforms.uTime.value = shaderUniforms.uTime.value;
-      materialUniforms.uViewport.value = shaderUniforms.uViewport.value;
-      materialUniforms.uResolution.value = shaderUniforms.uResolution.value;
-      materialUniforms.uTexture.value = shaderUniforms.uTexture.value;
+      materialUniforms.uTime.value = elapsed.current;
+      materialUniforms.uViewport.value = [viewport.x, viewport.y, viewport.zoom];
+      materialUniforms.uResolution.value = [textureWidth, textureHeight];
+      materialUniforms.uTexture.value = processedTexture;
     }
   });
 
@@ -280,12 +288,12 @@ export function MapLayerMesh({
       {hasCarousel ? (
         <mesh ref={cloneRef} position={[basePosition.x, basePosition.y, zIndex * 0.01]}>
           <planeGeometry args={[geoWidth, geoHeight]} />
-          {shaderConfig && shaderUniforms ? (
+          {shaderConfig && cloneShaderUniforms ? (
             <shaderMaterial
               ref={cloneShaderMaterialRef}
               vertexShader={shaderConfig.vertexShader ?? DEFAULT_LAYER_VERTEX_SHADER}
               fragmentShader={shaderConfig.fragmentShader}
-              uniforms={shaderUniforms}
+              uniforms={cloneShaderUniforms}
               transparent={shaderConfig.transparent ?? true}
               depthWrite={shaderConfig.depthWrite ?? false}
             />
