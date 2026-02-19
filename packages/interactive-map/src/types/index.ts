@@ -73,6 +73,42 @@ export type ShaderPresetName =
 export type MaskChannel = "r" | "g" | "b";
 
 /**
+ * Shader effect to apply on a mask channel.
+ * Uses the same shader preset / custom shader system as ShaderEffectConfig.
+ */
+export interface MaskChannelShaderEffect {
+  type?: "shader";
+  /** Built-in shader preset name */
+  preset?: ShaderPresetName;
+  /** Preset-specific parameters */
+  presetParams?: Record<string, unknown>;
+  /** Custom fragment shader (used when preset is not set) */
+  fragmentShader?: string;
+  /** Custom vertex shader */
+  vertexShader?: string;
+  /** Additional custom uniforms */
+  uniforms?: Record<string, { value: unknown }>;
+  /** Optional texture for the shader */
+  src?: string;
+}
+
+/**
+ * Particle effect to apply on a mask channel.
+ * Uses the same config shape as ParticleEffectConfig, minus the mask fields
+ * (those are automatically set from the parent MaskEffectConfig).
+ */
+export interface MaskChannelParticleEffect {
+  type: "particles";
+  config: Omit<
+    ParticleEffectConfig,
+    "id" | "maskSrc" | "maskChannel" | "maskBehavior" | "maskThreshold"
+  >;
+}
+
+/** A single channel can have a shader effect, particle effect, or nothing */
+export type MaskChannelEffect = MaskChannelShaderEffect | MaskChannelParticleEffect;
+
+/**
  * Custom shader configuration for a map layer.
  * When provided, the layer uses ShaderMaterial instead of meshBasicMaterial.
  *
@@ -441,6 +477,44 @@ export interface ShaderEffectConfig {
   maskChannel?: MaskChannel;
 }
 
+/**
+ * High-level config that maps RGB channels of a mask image to different effects.
+ * Each channel (red, green, blue) can have a shader effect, particle effect, or be unused.
+ * This is a convenience wrapper — internally it creates ShaderEffectConfig and ParticleEffectConfig
+ * instances with the appropriate maskSrc/maskChannel settings.
+ */
+export interface MaskEffectConfig {
+  /** Unique ID for this mask effect group */
+  id: string;
+  /** URL to the RGB mask image (PNG) */
+  src: string;
+  /** Effect to apply on the red channel regions */
+  red?: MaskChannelEffect;
+  /** Effect to apply on the green channel regions */
+  green?: MaskChannelEffect;
+  /** Effect to apply on the blue channel regions */
+  blue?: MaskChannelEffect;
+  /**
+   * Coordinate space for shader effects within this group.
+   * - 'map': world/map space (default). Parallax-aware.
+   * - 'viewport': screen-following overlay space.
+   */
+  space?: "map" | "viewport";
+  /** zIndex for depth ordering. Shader effects get this zIndex, particles get zIndex + 0.001. Default: 12 */
+  zIndex?: number;
+  /** Override parallax factor for all effects in this group */
+  parallaxFactor?: number;
+  /** Whether the shader materials use transparent blending. Default: true */
+  transparent?: boolean;
+  /**
+   * Particle mask behavior for all particle effects in this group.
+   * Default: "both" (spawn + constrain).
+   */
+  maskBehavior?: "spawn" | "constrain" | "both";
+  /** Minimum mask channel value threshold. Default: 0.1 */
+  maskThreshold?: number;
+}
+
 export interface InteractiveMapProps {
   layers: MapLayer[];
   /** ID of the layer to use as the viewport reference. If not provided, defaults to the layer with the lowest zIndex. */
@@ -462,6 +536,8 @@ export interface InteractiveMapProps {
   particleEffects?: ParticleEffectConfig[];
   /** Array of standalone shader effect configurations */
   shaderEffects?: ShaderEffectConfig[];
+  /** Array of mask effect configurations for region-based effects */
+  maskEffects?: MaskEffectConfig[];
   /** Called when a marker is clicked. Receives the marker ID. */
   onMarkerClick?: (markerId: string) => void;
   /**

@@ -4,6 +4,7 @@ import type {
   FogEffectConfig,
   MapLayer,
   MapMarker,
+  MaskEffectConfig,
   ParticleEffectConfig,
   PanConfig,
   ParallaxConfig,
@@ -11,6 +12,7 @@ import type {
   SpriteEffectConfig,
   ZoomConfig,
 } from "../types";
+import { resolveAllMaskEffects } from "../utils/maskEffectResolver";
 import { computeParallaxFactor } from "../utils/parallax";
 import { CameraController } from "./CameraController";
 import { FogEffect } from "./FogEffect";
@@ -37,6 +39,7 @@ interface MapSceneProps {
   fogEffects?: FogEffectConfig[];
   particleEffects?: ParticleEffectConfig[];
   shaderEffects?: ShaderEffectConfig[];
+  maskEffects?: MaskEffectConfig[];
   onMarkerClick?: (markerId: string) => void;
   onMarkerHoverChange?: (markerId: string | null) => void;
   focusTarget?: { x: number; y: number } | null;
@@ -63,6 +66,7 @@ export function MapScene({
   fogEffects,
   particleEffects,
   shaderEffects,
+  maskEffects,
   onMarkerClick,
   onMarkerHoverChange,
   focusTarget,
@@ -84,6 +88,20 @@ export function MapScene({
     const maxLayerZIndex = Math.max(...layers.map((layer) => layer.zIndex));
     return maxLayerZIndex * 0.01 + 0.01;
   }, [layers]);
+  const resolvedMaskEffects = useMemo(() => {
+    if (!maskEffects || maskEffects.length === 0) {
+      return { shaderEffects: [], particleEffects: [] };
+    }
+    return resolveAllMaskEffects(maskEffects);
+  }, [maskEffects]);
+  const allShaderEffects = useMemo(
+    () => [...(shaderEffects ?? []), ...resolvedMaskEffects.shaderEffects],
+    [shaderEffects, resolvedMaskEffects.shaderEffects]
+  );
+  const allParticleEffects = useMemo(
+    () => [...(particleEffects ?? []), ...resolvedMaskEffects.particleEffects],
+    [particleEffects, resolvedMaskEffects.particleEffects]
+  );
 
   return (
     <>
@@ -161,7 +179,7 @@ export function MapScene({
           />
         );
       })}
-      {(particleEffects ?? []).map((particle) => {
+      {allParticleEffects.map((particle) => {
         const attachedLayer = particle.layerId
           ? layers.find((layer) => layer.id === particle.layerId)
           : undefined;
@@ -212,7 +230,7 @@ export function MapScene({
           />
         );
       })}
-      {(shaderEffects ?? []).map((effect) => {
+      {allShaderEffects.map((effect) => {
         const parallaxFactor =
           !parallaxConfig || effect.parallaxFactor !== undefined
             ? (effect.parallaxFactor ?? 1)

@@ -133,20 +133,7 @@ export default function Home() {
           //   zIndex: 11,
           //   opacity: 0.8,
           // },
-          {
-            id: "masked-sparkles",
-            mode: "twinkle",
-            maxCount: 100,
-            color: "#FFD700",
-            size: 8,
-            sizeVariance: 0.4,
-            twinkleDuration: 2.5,
-            maskSrc: "/maps/demo-mask.png",
-            maskChannel: "g",
-            maskBehavior: "spawn",
-            maskThreshold: 0.1,
-            zIndex: 1,
-          },
+          // Masked particles are now configured via `maskEffects`.
           // {
           //   id: "masked-embers",
           //   mode: "drift",
@@ -171,15 +158,6 @@ export default function Home() {
             space: "viewport",
           },
           {
-            id: "masked-water",
-            preset: "waterRipple",
-            presetParams: { uSpeed: 0.8, uAmplitude: 0.015 },
-            maskSrc: "/maps/demo-mask.png",
-            maskChannel: "r",
-            zIndex: 1.5,
-            space: "map",
-          },
-          {
             id: "vignette",
             space: "viewport",
             fragmentShader: `
@@ -196,6 +174,33 @@ export default function Home() {
               }
             `,
             zIndex: 10,
+          },
+        ]}
+        maskEffects={[
+          {
+            id: "terrain-effects",
+            src: "/maps/demo-mask.png",
+            red: {
+              preset: "waterRipple",
+              presetParams: { uSpeed: 0.8, uAmplitude: 0.015 },
+            },
+            green: {
+              type: "particles",
+              config: {
+                mode: "twinkle",
+                maxCount: 80,
+                color: "#66ffff",
+                size: 4,
+                twinkleDuration: 2.5,
+              },
+            },
+            blue: {
+              preset: "glow",
+              presetParams: { uIntensity: 0.6, uGlowColor: [0.2, 1.0, 0.3] },
+            },
+            zIndex: 1.5,
+            space: "map",
+            maskBehavior: "both",
           },
         ]}
         onMarkerClick={(markerId) => {
