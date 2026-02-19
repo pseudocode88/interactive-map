@@ -341,6 +341,29 @@ export interface ParticleEffectConfig {
   parallaxFactor?: number;
   /** Base opacity multiplier for all particles (0–1). Default: 1 */
   opacity?: number;
+  /**
+   * Optional mask texture URL (PNG). When provided, particles are constrained
+   * to regions where the specified mask channel has a non-zero value.
+   * The mask image is loaded into an offscreen canvas for CPU-side pixel sampling.
+   * The mask coordinates map to the particle region (or full map if no region).
+   */
+  maskSrc?: string;
+  /**
+   * Which color channel of the mask texture to sample. Default: "r".
+   */
+  maskChannel?: MaskChannel;
+  /**
+   * How the mask constrains particles:
+   * - "spawn": Particles only spawn where mask > 0, but can drift freely. (Default)
+   * - "constrain": Particles are respawned if they move to where mask = 0.
+   * - "both": Spawn within mask AND constrain movement to mask region.
+   */
+  maskBehavior?: "spawn" | "constrain" | "both";
+  /**
+   * Minimum mask channel value (0–1) to consider a pixel as "inside" the region.
+   * Default: 0.1 (anything above ~25/255 is considered inside).
+   */
+  maskThreshold?: number;
 }
 
 export interface ShaderEffectConfig {
