@@ -313,9 +313,10 @@ export interface ParticleEffectConfig {
    * Visual mode:
    * - 'twinkle': particles appear at random positions, fade in/out, then reappear elsewhere (stationary).
    * - 'drift': particles spawn at random positions, move in a direction while fading out, then respawn.
+   * - 'glow': luminous particles using glow fragment shaders with optional pulse behavior.
    * Default: 'twinkle'
    */
-  mode?: "twinkle" | "drift";
+  mode?: "twinkle" | "drift" | "glow";
   /** Maximum number of particles. Default: 50 */
   maxCount?: number;
   /** Particle color as a CSS color string (hex, rgb, etc.). Default: "#ffffff" */
@@ -366,6 +367,31 @@ export interface ParticleEffectConfig {
   driftSpeedVariance?: number;
   /** How far a particle drifts (in pixels) before it fades out and respawns. Default: 100 */
   driftDistance?: number;
+  // --- Glow mode options ---
+  /**
+   * Glow visual sub-style (only used when mode is "glow"):
+   * - 'soft': smooth radial gradient fading from center (firefly look).
+   * - 'bloom': bright over-exposed core with a wide dim halo (magical orb look).
+   * - 'pulse': glow that breathes in size and intensity over time.
+   * - 'all': combines bloom visuals with pulse animation (default).
+   */
+  glowStyle?: "soft" | "bloom" | "pulse" | "all";
+  /**
+   * Glow movement behaviour (only used when mode is "glow"):
+   * - 'stationary': particle glows in place, respawns at a new random position when its cycle ends.
+   * - 'drift': particle slowly floats in a direction while glowing (reuses driftDirection/driftSpeed/driftDistance).
+   * Default: 'stationary'
+   */
+  glowMovement?: "stationary" | "drift";
+  /**
+   * Duration of one glow cycle in seconds.
+   * For 'pulse'/'all' styles this is the pulse period.
+   * For 'soft'/'bloom' with stationary movement this is how long before respawn.
+   * Default: 3
+   */
+  glowDuration?: number;
+  /** Random duration variance factor (0-1). Default: 0.4 */
+  glowDurationVariance?: number;
   /** zIndex for depth ordering (same system as MapLayer). Default: 11 */
   zIndex?: number;
   /**
@@ -566,7 +592,7 @@ export interface PinnedParticleEffectConfig {
   /** Unique ID for this pinned particle effect */
   id: string;
   /** Visual mode. Default: "twinkle" */
-  mode?: "twinkle" | "drift";
+  mode?: "twinkle" | "drift" | "glow";
   /** Maximum particle count. Default: 50 */
   maxCount?: number;
   /** Particle color (CSS string). Default: "#ffffff" */
@@ -591,6 +617,14 @@ export interface PinnedParticleEffectConfig {
   driftSpeedVariance?: number;
   /** Drift distance in px. Default: 100 */
   driftDistance?: number;
+  /** Glow visual sub-style. Default: "all" */
+  glowStyle?: "soft" | "bloom" | "pulse" | "all";
+  /** Glow movement behaviour. Default: "stationary" */
+  glowMovement?: "stationary" | "drift";
+  /** Glow cycle duration in seconds. Default: 3 */
+  glowDuration?: number;
+  /** Glow duration variance (0-1). Default: 0.4 */
+  glowDurationVariance?: number;
   /** Base opacity (0-1). Default: 1 */
   opacity?: number;
   /** Mask texture URL */

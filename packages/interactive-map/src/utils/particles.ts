@@ -106,16 +106,24 @@ export function createParticle(
   regionWidth: number,
   regionHeight: number
 ): ParticleInstance {
-  const baseSize = config.size ?? 3;
+  const baseSize = config.mode === "glow" ? (config.size ?? 8) : (config.size ?? 3);
   const sizeVariance = config.sizeVariance ?? 0.3;
   const sizeModifier = 1 + randomInRange(-sizeVariance, sizeVariance);
 
   const twinkleDuration = config.twinkleDuration ?? 2;
   const twinkleVariance = config.twinkleDurationVariance ?? 0.5;
-  const cycleDuration = Math.max(
+  let cycleDuration = Math.max(
     0.1,
     twinkleDuration * (1 + randomInRange(-twinkleVariance, twinkleVariance))
   );
+  if (config.mode === "glow") {
+    const glowDuration = config.glowDuration ?? 3;
+    const glowVariance = config.glowDurationVariance ?? 0.4;
+    cycleDuration = Math.max(
+      0.1,
+      glowDuration * (1 + randomInRange(-glowVariance, glowVariance))
+    );
+  }
 
   const particle: ParticleInstance = {
     x: randomInRange(0, Math.max(regionWidth, 0)),
@@ -156,6 +164,32 @@ export function initializeParticles(
       particle.elapsed = particle.phase * particle.cycleDuration;
       const t = (particle.elapsed % particle.cycleDuration) / particle.cycleDuration;
       particle.alpha = Math.sin(t * Math.PI);
+      continue;
+    }
+
+    if (mode === "glow") {
+      particle.elapsed = particle.phase * particle.cycleDuration;
+      const t = (particle.elapsed % particle.cycleDuration) / particle.cycleDuration;
+      const glowStyle = config.glowStyle ?? "all";
+
+      if (glowStyle === "pulse" || glowStyle === "all") {
+        const pulseFactor = Math.sin(t * Math.PI * 2) * 0.5 + 0.5;
+        particle.alpha = 0.3 + pulseFactor * 0.7;
+      } else {
+        particle.alpha = 1;
+      }
+
+      if (config.glowMovement === "drift") {
+        particle.distanceTraveled = particle.phase * particle.maxDistance;
+        particle.x = wrapCoordinate(
+          particle.x + particle.dx * particle.distanceTraveled,
+          regionWidth
+        );
+        particle.y = wrapCoordinate(
+          particle.y + particle.dy * particle.distanceTraveled,
+          regionHeight
+        );
+      }
       continue;
     }
 
@@ -226,7 +260,41 @@ export function initializeMaskedParticles(
       continue;
     }
 
+    if (mode === "glow") {
+      particle.elapsed = particle.phase * particle.cycleDuration;
+      const t = (particle.elapsed % particle.cycleDuration) / particle.cycleDuration;
+      const glowStyle = config.glowStyle ?? "all";
+
+      if (glowStyle === "pulse" || glowStyle === "all") {
+        const pulseFactor = Math.sin(t * Math.PI * 2) * 0.5 + 0.5;
+        particle.alpha = 0.3 + pulseFactor * 0.7;
+      } else {
+        particle.alpha = 1;
+      }
+
+      if (config.glowMovement === "drift") {
+        particle.distanceTraveled = particle.phase * particle.maxDistance;
+        particle.x = wrapCoordinate(
+          particle.x + particle.dx * particle.distanceTraveled,
+          regionWidth
+        );
+        particle.y = wrapCoordinate(
+          particle.y + particle.dy * particle.distanceTraveled,
+          regionHeight
+        );
+      }
+      continue;
+    }
+
     particle.distanceTraveled = particle.phase * particle.maxDistance;
+    particle.x = wrapCoordinate(
+      particle.x + particle.dx * particle.distanceTraveled,
+      regionWidth
+    );
+    particle.y = wrapCoordinate(
+      particle.y + particle.dy * particle.distanceTraveled,
+      regionHeight
+    );
     particle.alpha = clamp(1 - particle.distanceTraveled / particle.maxDistance, 0, 1);
   }
 
@@ -383,4 +451,130 @@ export function updateMaskedDriftParticle(
   particle.dy = next.dy;
   particle.speed = next.speed;
   particle.alpha = 1;
+}
+
+export function updateGlowParticle(
+  particle: ParticleInstance,
+  delta: number,
+  config: ParticleEffectConfig,
+  regionWidth: number,
+  regionHeight: number
+): void {
+  particle.elapsed += delta;
+
+  const glowMovement = config.glowMovement ?? "stationary";
+  if (glowMovement === "drift") {
+    const distanceDelta = particle.speed * delta;
+    particle.x = wrapCoordinate(particle.x + particle.dx * distanceDelta, regionWidth);
+    particle.y = wrapCoordinate(particle.y + particle.dy * distanceDelta, regionHeight);
+    particle.distanceTraveled += distanceDelta;
+  }
+
+  const glowStyle = config.glowStyle ?? "all";
+  const t = (particle.elapsed % particle.cycleDuration) / particle.cycleDuration;
+  if (glowStyle === "pulse" || glowStyle === "all") {
+    const pulseFactor = Math.sin(t * Math.PI * 2) * 0.5 + 0.5;
+    particle.alpha = 0.3 + pulseFactor * 0.7;
+  } else {
+    particle.alpha = 1;
+  }
+
+  if (glowMovement === "stationary") {
+    const completedCycles = Math.floor(particle.elapsed / particle.cycleDuration);
+    if (completedCycles > 0) {
+      particle.elapsed -= completedCycles * particle.cycleDuration;
+      particle.x = randomInRange(0, Math.max(regionWidth, 0));
+      particle.y = randomInRange(0, Math.max(regionHeight, 0));
+    }
+    return;
+  }
+
+  if (particle.distanceTraveled >= particle.maxDistance) {
+    particle.x = randomInRange(0, Math.max(regionWidth, 0));
+    particle.y = randomInRange(0, Math.max(regionHeight, 0));
+    particle.distanceTraveled = 0;
+    particle.elapsed = 0;
+    randomizeDriftMotion(particle, config);
+    particle.alpha = glowStyle === "pulse" || glowStyle === "all" ? 0.3 : 1;
+  }
+}
+
+export function updateMaskedGlowParticle(
+  particle: ParticleInstance,
+  delta: number,
+  config: ParticleEffectConfig,
+  regionWidth: number,
+  regionHeight: number,
+  sampler: MaskSampler,
+  channel: MaskChannel,
+  threshold: number = 0.1
+): void {
+  particle.elapsed += delta;
+
+  const glowMovement = config.glowMovement ?? "stationary";
+  if (glowMovement === "drift") {
+    const distanceDelta = particle.speed * delta;
+    particle.x = wrapCoordinate(particle.x + particle.dx * distanceDelta, regionWidth);
+    particle.y = wrapCoordinate(particle.y + particle.dy * distanceDelta, regionHeight);
+    particle.distanceTraveled += distanceDelta;
+
+    const outsideMask = !isParticleInMask(
+      particle,
+      regionWidth,
+      regionHeight,
+      sampler,
+      channel,
+      threshold
+    );
+    if (outsideMask || particle.distanceTraveled >= particle.maxDistance) {
+      const next = createMaskedParticle(
+        config,
+        regionWidth,
+        regionHeight,
+        sampler,
+        channel,
+        threshold
+      );
+      particle.x = next.x;
+      particle.y = next.y;
+      particle.distanceTraveled = 0;
+      particle.elapsed = 0;
+      particle.dx = next.dx;
+      particle.dy = next.dy;
+      particle.speed = next.speed;
+    }
+  }
+
+  const glowStyle = config.glowStyle ?? "all";
+  const t = (particle.elapsed % particle.cycleDuration) / particle.cycleDuration;
+  if (glowStyle === "pulse" || glowStyle === "all") {
+    const pulseFactor = Math.sin(t * Math.PI * 2) * 0.5 + 0.5;
+    particle.alpha = 0.3 + pulseFactor * 0.7;
+  } else {
+    particle.alpha = 1;
+  }
+
+  if (glowMovement === "stationary") {
+    const completedCycles = Math.floor(particle.elapsed / particle.cycleDuration);
+    if (completedCycles > 0) {
+      particle.elapsed -= completedCycles * particle.cycleDuration;
+      const maxAttempts = 30;
+      for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+        particle.x = randomInRange(0, Math.max(regionWidth, 0));
+        particle.y = randomInRange(0, Math.max(regionHeight, 0));
+        if (
+          sampleMaskAtParticle(
+            particle.x,
+            particle.y,
+            regionWidth,
+            regionHeight,
+            sampler,
+            channel
+          ) >= threshold
+        ) {
+          break;
+        }
+      }
+    }
+  }
 }

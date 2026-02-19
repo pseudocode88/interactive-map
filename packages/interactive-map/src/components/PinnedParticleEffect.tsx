@@ -15,6 +15,9 @@ import { useMaskSampler } from "../hooks/useMaskSampler";
 import type { ParticleEffectConfig, PinnedParticleEffectConfig } from "../types";
 import {
   PARTICLE_FRAGMENT_SHADER_CIRCLE,
+  PARTICLE_FRAGMENT_SHADER_GLOW_BLOOM,
+  PARTICLE_FRAGMENT_SHADER_GLOW_PULSE,
+  PARTICLE_FRAGMENT_SHADER_GLOW_SOFT,
   PARTICLE_FRAGMENT_SHADER_TEXTURE,
   PARTICLE_VERTEX_SHADER,
 } from "../utils/particleShaders";
@@ -23,7 +26,9 @@ import {
   initializeMaskedParticles,
   initializeParticles,
   type ParticleInstance,
+  updateGlowParticle,
   updateMaskedDriftParticle,
+  updateMaskedGlowParticle,
   updateMaskedTwinkleParticle,
   updateDriftParticle,
   updateTwinkleParticle,
@@ -43,6 +48,20 @@ function wrapCoordinate(value: number, size: number): number {
   }
 
   return ((value % size) + size) % size;
+}
+
+function selectGlowFragmentShader(glowStyle: string): string {
+  switch (glowStyle) {
+    case "soft":
+      return PARTICLE_FRAGMENT_SHADER_GLOW_SOFT;
+    case "bloom":
+      return PARTICLE_FRAGMENT_SHADER_GLOW_BLOOM;
+    case "pulse":
+      return PARTICLE_FRAGMENT_SHADER_GLOW_PULSE;
+    case "all":
+    default:
+      return PARTICLE_FRAGMENT_SHADER_GLOW_BLOOM;
+  }
 }
 
 function createFallbackParticle(
@@ -135,6 +154,10 @@ export function PinnedParticleEffect({
       driftSpeed: config.driftSpeed,
       driftSpeedVariance: config.driftSpeedVariance,
       driftDistance: config.driftDistance,
+      glowStyle: config.glowStyle,
+      glowMovement: config.glowMovement,
+      glowDuration: config.glowDuration,
+      glowDurationVariance: config.glowDurationVariance,
     }),
     [
       config.color,
@@ -143,6 +166,10 @@ export function PinnedParticleEffect({
       config.driftDistance,
       config.driftSpeed,
       config.driftSpeedVariance,
+      config.glowDuration,
+      config.glowDurationVariance,
+      config.glowMovement,
+      config.glowStyle,
       config.id,
       config.maxCount,
       config.mode,
@@ -248,6 +275,27 @@ export function PinnedParticleEffect({
             geoHeight
           );
         }
+      } else if (mode === "glow") {
+        if (maskSampler && (maskBehavior === "constrain" || maskBehavior === "both")) {
+          updateMaskedGlowParticle(
+            particle,
+            cappedDelta,
+            particleUtilConfig,
+            geoWidth,
+            geoHeight,
+            maskSampler,
+            maskChannel,
+            maskThreshold
+          );
+        } else {
+          updateGlowParticle(
+            particle,
+            cappedDelta,
+            particleUtilConfig,
+            geoWidth,
+            geoHeight
+          );
+        }
       } else if (maskSampler && (maskBehavior === "constrain" || maskBehavior === "both")) {
         updateMaskedTwinkleParticle(
           particle,
@@ -272,7 +320,13 @@ export function PinnedParticleEffect({
       positionArray[offset + 1] = localY;
       positionArray[offset + 2] = 0;
       alphaArray[index] = particle.alpha;
-      sizeArray[index] = particle.size;
+      let finalSize = particle.size;
+      if (mode === "glow" && (config.glowStyle === "pulse" || config.glowStyle === "all")) {
+        const t = (particle.elapsed % particle.cycleDuration) / particle.cycleDuration;
+        const pulseFactor = Math.sin(t * Math.PI * 2) * 0.5 + 0.5;
+        finalSize = particle.size * (1 + pulseFactor * 0.5);
+      }
+      sizeArray[index] = finalSize;
     }
 
     if (positionAttributeRef.current) {
@@ -308,7 +362,13 @@ export function PinnedParticleEffect({
       <shaderMaterial
         ref={materialRef}
         vertexShader={PARTICLE_VERTEX_SHADER}
-        fragmentShader={texture ? PARTICLE_FRAGMENT_SHADER_TEXTURE : PARTICLE_FRAGMENT_SHADER_CIRCLE}
+        fragmentShader={
+          config.mode === "glow"
+            ? selectGlowFragmentShader(config.glowStyle ?? "all")
+            : texture
+              ? PARTICLE_FRAGMENT_SHADER_TEXTURE
+              : PARTICLE_FRAGMENT_SHADER_CIRCLE
+        }
         uniforms={uniforms}
         transparent
         depthWrite={false}

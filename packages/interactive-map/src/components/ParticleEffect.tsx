@@ -17,6 +17,9 @@ import { useMaskSampler } from "../hooks/useMaskSampler";
 import { computeParallaxScale } from "../utils/parallax";
 import {
   PARTICLE_FRAGMENT_SHADER_CIRCLE,
+  PARTICLE_FRAGMENT_SHADER_GLOW_BLOOM,
+  PARTICLE_FRAGMENT_SHADER_GLOW_PULSE,
+  PARTICLE_FRAGMENT_SHADER_GLOW_SOFT,
   PARTICLE_FRAGMENT_SHADER_TEXTURE,
   PARTICLE_VERTEX_SHADER,
 } from "../utils/particleShaders";
@@ -24,7 +27,9 @@ import {
   createMaskedParticle,
   initializeMaskedParticles,
   initializeParticles,
+  updateGlowParticle,
   updateMaskedDriftParticle,
+  updateMaskedGlowParticle,
   updateMaskedTwinkleParticle,
   updateDriftParticle,
   updateTwinkleParticle,
@@ -61,6 +66,20 @@ function wrapCoordinate(value: number, size: number): number {
   }
 
   return ((value % size) + size) % size;
+}
+
+function selectGlowFragmentShader(glowStyle: string): string {
+  switch (glowStyle) {
+    case "soft":
+      return PARTICLE_FRAGMENT_SHADER_GLOW_SOFT;
+    case "bloom":
+      return PARTICLE_FRAGMENT_SHADER_GLOW_BLOOM;
+    case "pulse":
+      return PARTICLE_FRAGMENT_SHADER_GLOW_PULSE;
+    case "all":
+    default:
+      return PARTICLE_FRAGMENT_SHADER_GLOW_BLOOM;
+  }
 }
 
 function resolveParticleRegion(
@@ -220,6 +239,10 @@ export function ParticleEffect({
     config.driftSpeed,
     config.driftSpeedVariance,
     config.driftDistance,
+    config.glowDuration,
+    config.glowDurationVariance,
+    config.glowMovement,
+    config.glowStyle,
     config.region?.x,
     config.region?.y,
     config.region?.width,
@@ -307,6 +330,21 @@ export function ParticleEffect({
         } else {
           updateDriftParticle(particle, cappedDelta, config, region.width, region.height);
         }
+      } else if (mode === "glow") {
+        if (maskSampler && (maskBehavior === "constrain" || maskBehavior === "both")) {
+          updateMaskedGlowParticle(
+            particle,
+            cappedDelta,
+            config,
+            region.width,
+            region.height,
+            maskSampler,
+            maskChannel,
+            maskThreshold
+          );
+        } else {
+          updateGlowParticle(particle, cappedDelta, config, region.width, region.height);
+        }
       } else {
         if (maskSampler && (maskBehavior === "constrain" || maskBehavior === "both")) {
           updateMaskedTwinkleParticle(
@@ -334,7 +372,13 @@ export function ParticleEffect({
       positionArray[baseOffset + 1] = worldY;
       positionArray[baseOffset + 2] = 0;
       alphaArray[index] = particle.alpha;
-      sizeArray[index] = particle.size;
+      let finalSize = particle.size;
+      if (mode === "glow" && (config.glowStyle === "pulse" || config.glowStyle === "all")) {
+        const t = (particle.elapsed % particle.cycleDuration) / particle.cycleDuration;
+        const pulseFactor = Math.sin(t * Math.PI * 2) * 0.5 + 0.5;
+        finalSize = particle.size * (1 + pulseFactor * 0.5);
+      }
+      sizeArray[index] = finalSize;
     }
 
     if (positionAttributeRef.current) {
@@ -398,7 +442,13 @@ export function ParticleEffect({
       <shaderMaterial
         ref={materialRef}
         vertexShader={PARTICLE_VERTEX_SHADER}
-        fragmentShader={texture ? PARTICLE_FRAGMENT_SHADER_TEXTURE : PARTICLE_FRAGMENT_SHADER_CIRCLE}
+        fragmentShader={
+          config.mode === "glow"
+            ? selectGlowFragmentShader(config.glowStyle ?? "all")
+            : texture
+              ? PARTICLE_FRAGMENT_SHADER_TEXTURE
+              : PARTICLE_FRAGMENT_SHADER_CIRCLE
+        }
         uniforms={uniforms}
         transparent
         depthWrite={false}
