@@ -6,7 +6,16 @@ export {
   prependMaskDefine,
 } from "./utils/shaderDefaults";
 export { useMaskTexture } from "./hooks/useMaskTexture";
+export { useMaskSampler } from "./hooks/useMaskSampler";
 export { resolveShaderPreset } from "./utils/shaderPresets";
+export { createMaskSampler, loadMaskSampler, type MaskSampler } from "./utils/maskSampler";
+export {
+  createMaskedParticle,
+  initializeMaskedParticles,
+  isParticleInMask,
+  updateMaskedDriftParticle,
+  updateMaskedTwinkleParticle,
+} from "./utils/particles";
 export type { ResolvedPreset } from "./utils/shaderPresets";
 export type {
   BounceAnimation,

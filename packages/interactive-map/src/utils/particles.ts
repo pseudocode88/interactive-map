@@ -1,4 +1,5 @@
-import type { ParticleEffectConfig } from "../types";
+import type { MaskChannel, ParticleEffectConfig } from "../types";
+import type { MaskSampler } from "./maskSampler";
 
 export interface ParticleInstance {
   /** Position within the region (local coords, origin = region top-left) */
@@ -72,6 +73,21 @@ function wrapCoordinate(value: number, size: number): number {
   }
 
   return ((value % size) + size) % size;
+}
+
+function sampleMaskAtParticle(
+  particleX: number,
+  particleY: number,
+  regionWidth: number,
+  regionHeight: number,
+  sampler: MaskSampler,
+  channel: MaskChannel
+): number {
+  const safeWidth = Math.max(regionWidth, 1);
+  const safeHeight = Math.max(regionHeight, 1);
+  const maskX = (particleX / safeWidth) * sampler.width;
+  const maskY = (particleY / safeHeight) * sampler.height;
+  return sampler.sample(maskX, maskY, channel);
 }
 
 function randomizeDriftMotion(particle: ParticleInstance, config: ParticleEffectConfig): void {
@@ -158,6 +174,84 @@ export function initializeParticles(
   return particles;
 }
 
+export function createMaskedParticle(
+  config: ParticleEffectConfig,
+  regionWidth: number,
+  regionHeight: number,
+  sampler: MaskSampler,
+  channel: MaskChannel,
+  threshold: number = 0.1,
+  maxAttempts: number = 30
+): ParticleInstance {
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const particle = createParticle(config, regionWidth, regionHeight);
+    const maskValue = sampleMaskAtParticle(
+      particle.x,
+      particle.y,
+      regionWidth,
+      regionHeight,
+      sampler,
+      channel
+    );
+    if (maskValue >= threshold) {
+      return particle;
+    }
+  }
+
+  return createParticle(config, regionWidth, regionHeight);
+}
+
+export function initializeMaskedParticles(
+  config: ParticleEffectConfig,
+  regionWidth: number,
+  regionHeight: number,
+  count: number,
+  sampler: MaskSampler,
+  channel: MaskChannel,
+  threshold: number = 0.1
+): ParticleInstance[] {
+  const safeCount = Math.max(0, Math.floor(count));
+  const particles = Array.from({ length: safeCount }, () =>
+    createMaskedParticle(config, regionWidth, regionHeight, sampler, channel, threshold)
+  );
+
+  const mode = config.mode ?? "twinkle";
+  for (let index = 0; index < particles.length; index += 1) {
+    const particle = particles[index];
+
+    if (mode === "twinkle") {
+      particle.elapsed = particle.phase * particle.cycleDuration;
+      const t = (particle.elapsed % particle.cycleDuration) / particle.cycleDuration;
+      particle.alpha = Math.sin(t * Math.PI);
+      continue;
+    }
+
+    particle.distanceTraveled = particle.phase * particle.maxDistance;
+    particle.alpha = clamp(1 - particle.distanceTraveled / particle.maxDistance, 0, 1);
+  }
+
+  return particles;
+}
+
+export function isParticleInMask(
+  particle: ParticleInstance,
+  regionWidth: number,
+  regionHeight: number,
+  sampler: MaskSampler,
+  channel: MaskChannel,
+  threshold: number = 0.1
+): boolean {
+  const maskValue = sampleMaskAtParticle(
+    particle.x,
+    particle.y,
+    regionWidth,
+    regionHeight,
+    sampler,
+    channel
+  );
+  return maskValue >= threshold;
+}
+
 export function updateTwinkleParticle(
   particle: ParticleInstance,
   delta: number,
@@ -171,6 +265,43 @@ export function updateTwinkleParticle(
     particle.elapsed -= completedCycles * particle.cycleDuration;
     particle.x = randomInRange(0, Math.max(regionWidth, 0));
     particle.y = randomInRange(0, Math.max(regionHeight, 0));
+  }
+
+  const t = (particle.elapsed % particle.cycleDuration) / particle.cycleDuration;
+  particle.alpha = Math.sin(t * Math.PI);
+}
+
+export function updateMaskedTwinkleParticle(
+  particle: ParticleInstance,
+  delta: number,
+  regionWidth: number,
+  regionHeight: number,
+  sampler: MaskSampler,
+  channel: MaskChannel,
+  threshold: number = 0.1
+): void {
+  particle.elapsed += delta;
+
+  const completedCycles = Math.floor(particle.elapsed / particle.cycleDuration);
+  if (completedCycles > 0) {
+    particle.elapsed -= completedCycles * particle.cycleDuration;
+    const maxAttempts = 30;
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      particle.x = randomInRange(0, Math.max(regionWidth, 0));
+      particle.y = randomInRange(0, Math.max(regionHeight, 0));
+      if (
+        sampleMaskAtParticle(
+          particle.x,
+          particle.y,
+          regionWidth,
+          regionHeight,
+          sampler,
+          channel
+        ) >= threshold
+      ) {
+        break;
+      }
+    }
   }
 
   const t = (particle.elapsed % particle.cycleDuration) / particle.cycleDuration;
@@ -201,5 +332,55 @@ export function updateDriftParticle(
   particle.maxDistance = Math.max(1, config.driftDistance ?? 100);
   particle.elapsed = 0;
   randomizeDriftMotion(particle, config);
+  particle.alpha = 1;
+}
+
+export function updateMaskedDriftParticle(
+  particle: ParticleInstance,
+  delta: number,
+  config: ParticleEffectConfig,
+  regionWidth: number,
+  regionHeight: number,
+  sampler: MaskSampler,
+  channel: MaskChannel,
+  threshold: number = 0.1
+): void {
+  const distanceDelta = particle.speed * delta;
+
+  particle.x = wrapCoordinate(particle.x + particle.dx * distanceDelta, regionWidth);
+  particle.y = wrapCoordinate(particle.y + particle.dy * distanceDelta, regionHeight);
+  particle.distanceTraveled += distanceDelta;
+  particle.alpha = clamp(1 - particle.distanceTraveled / particle.maxDistance, 0, 1);
+
+  const outsideMask = !isParticleInMask(
+    particle,
+    regionWidth,
+    regionHeight,
+    sampler,
+    channel,
+    threshold
+  );
+  const distanceExhausted = particle.distanceTraveled >= particle.maxDistance;
+
+  if (!outsideMask && !distanceExhausted) {
+    return;
+  }
+
+  const next = createMaskedParticle(
+    config,
+    regionWidth,
+    regionHeight,
+    sampler,
+    channel,
+    threshold
+  );
+  particle.x = next.x;
+  particle.y = next.y;
+  particle.distanceTraveled = 0;
+  particle.maxDistance = Math.max(1, config.driftDistance ?? 100);
+  particle.elapsed = 0;
+  particle.dx = next.dx;
+  particle.dy = next.dy;
+  particle.speed = next.speed;
   particle.alpha = 1;
 }

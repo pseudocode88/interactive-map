@@ -13,9 +13,14 @@ import {
   TextureLoader,
 } from "three";
 import type { ParticleEffectConfig } from "../types";
+import { useMaskSampler } from "../hooks/useMaskSampler";
 import { computeParallaxScale } from "../utils/parallax";
 import {
+  createMaskedParticle,
+  initializeMaskedParticles,
   initializeParticles,
+  updateMaskedDriftParticle,
+  updateMaskedTwinkleParticle,
   updateDriftParticle,
   updateTwinkleParticle,
   type ParticleInstance,
@@ -155,6 +160,10 @@ export function ParticleEffect({
   const mode = config.mode ?? "twinkle";
   const zIndex = config.zIndex ?? 11;
   const opacity = config.opacity ?? 1;
+  const maskSampler = useMaskSampler(config.maskSrc);
+  const maskChannel = config.maskChannel ?? "r";
+  const maskBehavior = config.maskBehavior ?? "spawn";
+  const maskThreshold = config.maskThreshold ?? 0.1;
 
   useEffect(() => {
     if (!config.src) {
@@ -213,12 +222,20 @@ export function ParticleEffect({
       layerOffset
     );
 
-    particlesRef.current = initializeParticles(
-      config,
-      initialRegion.width,
-      initialRegion.height,
-      maxCount
-    );
+    if (maskSampler && (maskBehavior === "spawn" || maskBehavior === "both")) {
+      particlesRef.current = initializeMaskedParticles(
+        config,
+        initialRegion.width,
+        initialRegion.height,
+        maxCount,
+        maskSampler,
+        maskChannel,
+        maskThreshold
+      );
+      return;
+    }
+
+    particlesRef.current = initializeParticles(config, initialRegion.width, initialRegion.height, maxCount);
   }, [
     baseFrustumHalfHeight,
     baseFrustumHalfWidth,
@@ -243,6 +260,10 @@ export function ParticleEffect({
     layerOffset.x,
     layerOffset.y,
     maxCount,
+    maskBehavior,
+    maskChannel,
+    maskSampler,
+    maskThreshold,
     viewportRef,
   ]);
 
@@ -288,14 +309,50 @@ export function ParticleEffect({
     for (let index = 0; index < maxCount; index += 1) {
       let particle = particles[index];
       if (!particle) {
-        particle = initializeParticles(config, region.width, region.height, 1)[0];
+        if (maskSampler && (maskBehavior === "spawn" || maskBehavior === "both")) {
+          particle = createMaskedParticle(
+            config,
+            region.width,
+            region.height,
+            maskSampler,
+            maskChannel,
+            maskThreshold
+          );
+        } else {
+          particle = initializeParticles(config, region.width, region.height, 1)[0];
+        }
         particles[index] = particle;
       }
 
       if (mode === "drift") {
-        updateDriftParticle(particle, cappedDelta, config, region.width, region.height);
+        if (maskSampler && (maskBehavior === "constrain" || maskBehavior === "both")) {
+          updateMaskedDriftParticle(
+            particle,
+            cappedDelta,
+            config,
+            region.width,
+            region.height,
+            maskSampler,
+            maskChannel,
+            maskThreshold
+          );
+        } else {
+          updateDriftParticle(particle, cappedDelta, config, region.width, region.height);
+        }
       } else {
-        updateTwinkleParticle(particle, cappedDelta, region.width, region.height);
+        if (maskSampler && (maskBehavior === "constrain" || maskBehavior === "both")) {
+          updateMaskedTwinkleParticle(
+            particle,
+            cappedDelta,
+            region.width,
+            region.height,
+            maskSampler,
+            maskChannel,
+            maskThreshold
+          );
+        } else {
+          updateTwinkleParticle(particle, cappedDelta, region.width, region.height);
+        }
       }
 
       particle.x = wrapCoordinate(particle.x, region.width);
