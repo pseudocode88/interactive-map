@@ -154,12 +154,34 @@
 
 ## Remaining Chunks
 
-### Chunk 7d: Custom Shader Support
+### Chunk 7d-1: Layer Shader Support
+**Status:** In Progress
+**Plan:** [chunk-7d-1-layer-shader-support-2026-02-19.md](plans/chunk-7d-1-layer-shader-support-2026-02-19.md)
+
+Scope:
+- Optional `shaderConfig` on `MapLayer` to replace `meshBasicMaterial` with custom `ShaderMaterial`
+- Auto-injected uniforms: `uTime`, `uResolution`, `uTexture`, `uViewport`
+- Default passthrough vertex shader when omitted
+- Custom uniforms support with collision override
+- `utils/shaderDefaults.ts` helper
+
+### Chunk 7d-2: Standalone Shader Effects
 **Status:** Not Started
 
 Scope:
-- Escape hatch for advanced users to apply custom ShaderMaterial
-- Built-in shader presets (water ripple, heat haze, etc.)
+- New `ShaderEffectConfig` type and `ShaderEffect` component
+- Fullscreen or region-based shader quad (like FogEffect/ParticleEffect)
+- Integrated into `MapScene` with parallax support
+- Auto-injected uniforms (`uTime`, `uResolution`, `uViewport`)
+
+### Chunk 7d-3: Built-in Shader Presets
+**Status:** Not Started
+
+Scope:
+- Preset library usable by both layer shaders and standalone shader effects
+- Presets: water ripple, heat haze, glow, dissolve, chromatic aberration
+- Configurable parameters per preset
+- `utils/shaderPresets.ts` preset registry
 
 ---
 
