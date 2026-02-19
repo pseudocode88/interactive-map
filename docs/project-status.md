@@ -1,6 +1,6 @@
 # InteractiveMap - Project Status
 
-**Last Updated:** 2026-02-19
+**Last Updated:** 2026-02-19 (plans added for Chunk 8a/8b/8c)
 **Branch:** main (clean)
 
 ---
@@ -173,18 +173,54 @@
 - `buildStandaloneShaderUniforms` utility + barrel exports
 - Conditional texture loading via wrapper component pattern
 
+### Chunk 7d-3: Built-in Shader Presets
+**Status:** Done
+**Plan:** [chunk-7d-3-built-in-shader-presets-2026-02-19.md](plans/done/chunk-7d-3-built-in-shader-presets-2026-02-19.md)
+
+- Preset library usable by both layer shaders and standalone shader effects
+- 5 presets: water ripple, heat haze, glow, dissolve, chromatic aberration
+- Configurable parameters per preset with sensible defaults
+- `utils/shaderPresets.ts` preset registry + `resolveShaderPreset()` resolver
+- `#ifdef HAS_TEXTURE` for dual-mode shaders (textured + procedural fallback)
+
 ---
 
 ## Remaining Chunks
 
-### Chunk 7d-3: Built-in Shader Presets
+### Chunk 8a: Mask Texture Support for Shader Effects
 **Status:** Not Started
+**Plan:** [chunk-8a-mask-shader-effects-2026-02-19.md](plans/chunk-8a-mask-shader-effects-2026-02-19.md)
 
 Scope:
-- Preset library usable by both layer shaders and standalone shader effects
-- Presets: water ripple, heat haze, glow, dissolve, chromatic aberration
-- Configurable parameters per preset
-- `utils/shaderPresets.ts` preset registry
+- `maskSrc` and `maskChannel` on `LayerShaderConfig` and `ShaderEffectConfig`
+- `useMaskTexture` hook for conditional mask texture loading
+- `buildMaskUniforms()` and `prependMaskDefine()` helpers
+- `#ifdef HAS_MASK` support in all 5 shader presets
+- `vec3` dot-product channel selection (no GLSL branching)
+
+### Chunk 8b: Mask-Aware Particle Spawning
+**Status:** Not Started
+**Plan:** [chunk-8b-mask-aware-particles-2026-02-19.md](plans/chunk-8b-mask-aware-particles-2026-02-19.md)
+**Depends on:** Chunk 8a (MaskChannel type)
+
+Scope:
+- `maskSrc`, `maskChannel`, `maskBehavior`, `maskThreshold` on `ParticleEffectConfig`
+- CPU-side mask sampling via offscreen canvas (`MaskSampler`)
+- `useMaskSampler` hook for React lifecycle management
+- Three behaviors: "spawn" (spawn-only), "constrain" (kill-on-exit), "both"
+- Mask-aware create/init/update functions in `utils/particles.ts`
+
+### Chunk 8c: Multi-Channel Mask Effect Mapping
+**Status:** Not Started
+**Plan:** [chunk-8c-mask-effect-mapping-2026-02-19.md](plans/chunk-8c-mask-effect-mapping-2026-02-19.md)
+**Depends on:** Chunks 8a + 8b
+
+Scope:
+- High-level `MaskEffectConfig` API mapping RGB channels to different effects
+- `maskEffects` prop on `InteractiveMapProps`
+- `resolveMaskEffects()` expands config into individual shader/particle configs
+- Mix shader effects and particle effects per channel
+- Integration into `MapScene` by merging with existing effect arrays
 
 ---
 
@@ -205,7 +241,9 @@ packages/interactive-map/src/
 │   └── ShaderEffect.tsx        # Standalone shader quad (map-space or viewport-space)
 ├── hooks/
 │   ├── useBaseImageSize.ts     # Base image dimension detection
-│   └── useContainerSize.ts     # Container ResizeObserver
+│   ├── useContainerSize.ts     # Container ResizeObserver
+│   ├── useMaskTexture.ts       # Conditional mask texture loading (GPU, for shaders) [8a]
+│   └── useMaskSampler.ts       # Conditional mask sampler loading (CPU, for particles) [8b]
 ├── utils/
 │   ├── easing.ts               # Cubic-bezier + named preset easing
 │   ├── animation.ts            # Pure animation math (bounce, carousel, fade, wobble)
@@ -213,8 +251,11 @@ packages/interactive-map/src/
 │   ├── spriteSheet.ts          # Sprite sheet grid detection + frame UV calculation
 │   ├── spriteInstances.ts      # Sprite instance lifecycle (spawn, update, despawn)
 │   ├── fog.ts                  # Pure fog math (drift, opacity pulse, scale breathing)
-│   ├── particles.ts            # Pure particle math (twinkle/drift lifecycle)
-│   └── shaderDefaults.ts       # Default vertex shader + auto-injected uniform builder
+│   ├── particles.ts            # Pure particle math (twinkle/drift lifecycle + mask-aware variants) [8b]
+│   ├── shaderDefaults.ts       # Default vertex shader + auto-injected uniform builder + mask helpers [8a]
+│   ├── shaderPresets.ts        # Built-in shader preset registry + resolver [7d-3]
+│   ├── maskSampler.ts          # CPU-side mask pixel sampling via offscreen canvas [8b]
+│   └── maskEffectResolver.ts   # Expands MaskEffectConfig into shader/particle configs [8c]
 ├── types/
 │   └── index.ts                # MapLayer, MapMarker, LayerShaderConfig, ShaderEffectConfig, SpriteEffectConfig, FogEffectConfig, ParticleEffectConfig, InteractiveMapProps, etc.
 └── index.ts                    # Barrel exports
