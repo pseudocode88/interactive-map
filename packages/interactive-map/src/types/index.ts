@@ -69,6 +69,9 @@ export type ShaderPresetName =
   | "dissolve"
   | "chromaticAberration";
 
+/** Color channel to sample from a mask texture */
+export type MaskChannel = "r" | "g" | "b";
+
 /**
  * Custom shader configuration for a map layer.
  * When provided, the layer uses ShaderMaterial instead of meshBasicMaterial.
@@ -107,6 +110,20 @@ export interface LayerShaderConfig {
    * See `ShaderPresetName` for available presets and their parameters.
    */
   presetParams?: Record<string, unknown>;
+  /**
+   * Optional mask texture URL (PNG). When provided, the mask is loaded and injected
+   * as `uMaskTexture` (sampler2D). The effect is multiplied by the selected channel's
+   * intensity (0.0 = fully masked, 1.0 = fully visible).
+   * The mask is sampled at the same UV coordinates as the layer texture.
+   */
+  maskSrc?: string;
+  /**
+   * Which color channel of the mask texture to use. Default: "r".
+   * - "r": red channel
+   * - "g": green channel
+   * - "b": blue channel
+   */
+  maskChannel?: MaskChannel;
 }
 
 export interface MapLayer {
@@ -385,6 +402,20 @@ export interface ShaderEffectConfig {
    * See `ShaderPresetName` for available presets and their parameters.
    */
   presetParams?: Record<string, unknown>;
+  /**
+   * Optional mask texture URL (PNG). When provided, the mask is loaded and injected
+   * as `uMaskTexture` (sampler2D). The effect is multiplied by the selected channel's
+   * intensity (0.0 = fully masked, 1.0 = fully visible).
+   * The mask is sampled at `vUv` (0-1 across the shader quad).
+   */
+  maskSrc?: string;
+  /**
+   * Which color channel of the mask texture to use. Default: "r".
+   * - "r": red channel
+   * - "g": green channel
+   * - "b": blue channel
+   */
+  maskChannel?: MaskChannel;
 }
 
 export interface InteractiveMapProps {

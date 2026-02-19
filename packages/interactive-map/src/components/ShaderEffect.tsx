@@ -9,10 +9,13 @@ import {
   TextureLoader,
   type Texture,
 } from "three";
+import { useMaskTexture } from "../hooks/useMaskTexture";
 import type { ShaderEffectConfig } from "../types";
 import {
   DEFAULT_LAYER_VERTEX_SHADER,
+  buildMaskUniforms,
   buildStandaloneShaderUniforms,
+  prependMaskDefine,
 } from "../utils/shaderDefaults";
 import { computeParallaxScale } from "../utils/parallax";
 import { resolveShaderPreset } from "../utils/shaderPresets";
@@ -46,6 +49,9 @@ function ShaderEffectInner({
   const meshRef = useRef<Mesh>(null);
   const shaderMaterialRef = useRef<ShaderMaterial>(null);
   const elapsed = useRef(0);
+  const maskTexture = useMaskTexture(config.maskSrc);
+  const maskChannel = config.maskChannel ?? "r";
+  const hasMask = !!maskTexture;
 
   const isViewportSpace = config.space === "viewport";
   const viewportWidthAtZoomOne = baseFrustumHalfWidth * 2;
@@ -91,22 +97,32 @@ function ShaderEffectInner({
       return null;
     }
 
-    return resolveShaderPreset(config.preset, config.presetParams, !!texture);
-  }, [config.preset, config.presetParams, texture]);
+    return resolveShaderPreset(config.preset, config.presetParams, !!texture, hasMask);
+  }, [config.preset, config.presetParams, texture, hasMask]);
 
   const effectiveVertexShader =
     resolvedPreset?.vertexShader ?? config.vertexShader ?? DEFAULT_LAYER_VERTEX_SHADER;
 
   const effectiveFragmentShader =
-    resolvedPreset?.fragmentShader ?? config.fragmentShader ?? "";
+    resolvedPreset?.fragmentShader ??
+    prependMaskDefine(config.fragmentShader ?? "", hasMask);
 
   const shaderUniforms = useMemo(() => {
     const autoUniforms = buildStandaloneShaderUniforms(quadWidth, quadHeight, texture);
     const presetUniforms = resolvedPreset?.uniforms ?? {};
+    const maskUniforms = buildMaskUniforms(maskTexture, maskChannel);
     const customUniforms = config.uniforms ?? {};
 
-    return { ...autoUniforms, ...presetUniforms, ...customUniforms };
-  }, [quadWidth, quadHeight, texture, resolvedPreset, config.uniforms]);
+    return { ...autoUniforms, ...presetUniforms, ...maskUniforms, ...customUniforms };
+  }, [
+    quadWidth,
+    quadHeight,
+    texture,
+    resolvedPreset,
+    maskTexture,
+    maskChannel,
+    config.uniforms,
+  ]);
   const hasShader = !!config.preset || !!config.fragmentShader;
 
   useFrame((_, delta) => {

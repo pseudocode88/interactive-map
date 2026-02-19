@@ -1,8 +1,11 @@
 export { InteractiveMap } from "./components/InteractiveMap";
 export {
   DEFAULT_LAYER_VERTEX_SHADER,
+  buildMaskUniforms,
   buildStandaloneShaderUniforms,
+  prependMaskDefine,
 } from "./utils/shaderDefaults";
+export { useMaskTexture } from "./hooks/useMaskTexture";
 export { resolveShaderPreset } from "./utils/shaderPresets";
 export type { ResolvedPreset } from "./utils/shaderPresets";
 export type {
@@ -17,6 +20,7 @@ export type {
   InteractiveMapProps,
   LayerAnimation,
   LayerShaderConfig,
+  MaskChannel,
   MapLayer,
   MapMarker,
   ParticleEffectConfig,

@@ -9,6 +9,7 @@ import {
   TextureLoader,
 } from "three";
 import type { CarouselAnimation, LayerAnimation, LayerShaderConfig } from "../types";
+import { useMaskTexture } from "../hooks/useMaskTexture";
 import { computeAnimations, normalizeDirection } from "../utils/animation";
 import { resolveEasing } from "../utils/easing";
 import {
@@ -16,8 +17,10 @@ import {
   computeParallaxScale,
 } from "../utils/parallax";
 import {
+  buildMaskUniforms,
   buildLayerShaderUniforms,
   DEFAULT_LAYER_VERTEX_SHADER,
+  prependMaskDefine,
 } from "../utils/shaderDefaults";
 import { resolveShaderPreset } from "../utils/shaderPresets";
 
@@ -63,6 +66,9 @@ export function MapLayerMesh({
   const shaderMaterialRef = useRef<ShaderMaterial>(null);
   const cloneShaderMaterialRef = useRef<ShaderMaterial>(null);
   const elapsed = useRef(0);
+  const maskTexture = useMaskTexture(shaderConfig?.maskSrc);
+  const maskChannel = shaderConfig?.maskChannel ?? "r";
+  const hasMask = !!maskTexture;
   const textureWidth = texture.image.width;
   const textureHeight = texture.image.height;
   const autoScale = useMemo(() => {
@@ -117,9 +123,10 @@ export function MapLayerMesh({
     return resolveShaderPreset(
       shaderConfig.preset,
       shaderConfig.presetParams,
-      true
+      true,
+      hasMask
     );
-  }, [shaderConfig?.preset, shaderConfig?.presetParams]);
+  }, [shaderConfig?.preset, shaderConfig?.presetParams, hasMask]);
 
   const effectiveVertexShader =
     resolvedPreset?.vertexShader ??
@@ -127,7 +134,8 @@ export function MapLayerMesh({
     DEFAULT_LAYER_VERTEX_SHADER;
 
   const effectiveFragmentShader =
-    resolvedPreset?.fragmentShader ?? shaderConfig?.fragmentShader ?? "";
+    resolvedPreset?.fragmentShader ??
+    prependMaskDefine(shaderConfig?.fragmentShader ?? "", hasMask);
 
   const shaderUniforms = useMemo(() => {
     if (!shaderConfig) {
@@ -143,10 +151,19 @@ export function MapLayerMesh({
       textureHeight
     );
     const presetUniforms = resolvedPreset?.uniforms ?? {};
+    const maskUniforms = buildMaskUniforms(maskTexture, maskChannel);
     const customUniforms = shaderConfig.uniforms ?? {};
 
-    return { ...autoUniforms, ...presetUniforms, ...customUniforms };
-  }, [processedTexture, shaderConfig, resolvedPreset, textureHeight, textureWidth]);
+    return { ...autoUniforms, ...presetUniforms, ...maskUniforms, ...customUniforms };
+  }, [
+    maskChannel,
+    maskTexture,
+    processedTexture,
+    shaderConfig,
+    resolvedPreset,
+    textureHeight,
+    textureWidth,
+  ]);
 
   const cloneShaderUniforms = useMemo(() => {
     if (!shaderConfig) {
@@ -162,10 +179,19 @@ export function MapLayerMesh({
       textureHeight
     );
     const presetUniforms = resolvedPreset?.uniforms ?? {};
+    const maskUniforms = buildMaskUniforms(maskTexture, maskChannel);
     const customUniforms = shaderConfig.uniforms ?? {};
 
-    return { ...autoUniforms, ...presetUniforms, ...customUniforms };
-  }, [processedTexture, shaderConfig, resolvedPreset, textureHeight, textureWidth]);
+    return { ...autoUniforms, ...presetUniforms, ...maskUniforms, ...customUniforms };
+  }, [
+    maskChannel,
+    maskTexture,
+    processedTexture,
+    shaderConfig,
+    resolvedPreset,
+    textureHeight,
+    textureWidth,
+  ]);
 
   const resolvedEasings = useMemo(
     () =>

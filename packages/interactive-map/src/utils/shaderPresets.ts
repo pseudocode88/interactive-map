@@ -36,6 +36,11 @@ uniform float uAmplitude;
 uniform float uFrequency;
 uniform vec4 uWaterColor;
 
+#ifdef HAS_MASK
+uniform sampler2D uMaskTexture;
+uniform vec3 uMaskChannelSelector;
+#endif
+
 #ifdef HAS_TEXTURE
 uniform sampler2D uTexture;
 #endif
@@ -62,6 +67,12 @@ void main() {
     color.a *= pattern * 0.6 + 0.2;
     gl_FragColor = color;
   #endif
+
+  #ifdef HAS_MASK
+  vec4 maskSample = texture2D(uMaskTexture, vUv);
+  float maskValue = dot(maskSample.rgb, uMaskChannelSelector);
+  gl_FragColor.a *= maskValue;
+  #endif
 }
 `;
 
@@ -76,6 +87,11 @@ varying vec2 vUv;
 uniform float uSpeed;
 uniform float uIntensity;
 uniform float uScale;
+
+#ifdef HAS_MASK
+uniform sampler2D uMaskTexture;
+uniform vec3 uMaskChannelSelector;
+#endif
 
 #ifdef HAS_TEXTURE
 uniform sampler2D uTexture;
@@ -100,6 +116,12 @@ void main() {
     float shimmer = sin(uv.y * uScale * 4.0 + t * 2.0) * 0.3 + 0.7;
     gl_FragColor = vec4(1.0, 1.0, 1.0, haze * shimmer * uIntensity * 1.5);
   #endif
+
+  #ifdef HAS_MASK
+  vec4 maskSample = texture2D(uMaskTexture, vUv);
+  float maskValue = dot(maskSample.rgb, uMaskChannelSelector);
+  gl_FragColor.a *= maskValue;
+  #endif
 }
 `;
 
@@ -115,6 +137,11 @@ uniform float uIntensity;
 uniform vec3 uGlowColor;
 uniform float uRadius;
 uniform float uPulseSpeed;
+
+#ifdef HAS_MASK
+uniform sampler2D uMaskTexture;
+uniform vec3 uMaskChannelSelector;
+#endif
 
 #ifdef HAS_TEXTURE
 uniform sampler2D uTexture;
@@ -137,6 +164,12 @@ void main() {
     float glow = (1.0 - smoothstep(0.0, uRadius, dist)) * uIntensity * pulse;
     gl_FragColor = vec4(uGlowColor * glow, glow);
   #endif
+
+  #ifdef HAS_MASK
+  vec4 maskSample = texture2D(uMaskTexture, vUv);
+  float maskValue = dot(maskSample.rgb, uMaskChannelSelector);
+  gl_FragColor.a *= maskValue;
+  #endif
 }
 `;
 
@@ -153,6 +186,11 @@ uniform float uEdgeWidth;
 uniform vec3 uEdgeColor;
 uniform float uNoiseScale;
 uniform float uSpeed;
+
+#ifdef HAS_MASK
+uniform sampler2D uMaskTexture;
+uniform vec3 uMaskChannelSelector;
+#endif
 
 #ifdef HAS_TEXTURE
 uniform sampler2D uTexture;
@@ -199,6 +237,12 @@ void main() {
     alpha = max(alpha, edge * 0.8);
     gl_FragColor = vec4(finalColor, alpha);
   #endif
+
+  #ifdef HAS_MASK
+  vec4 maskSample = texture2D(uMaskTexture, vUv);
+  float maskValue = dot(maskSample.rgb, uMaskChannelSelector);
+  gl_FragColor.a *= maskValue;
+  #endif
 }
 `;
 
@@ -213,6 +257,11 @@ varying vec2 vUv;
 uniform float uOffset;
 uniform float uAngle;
 uniform float uSpeed;
+
+#ifdef HAS_MASK
+uniform sampler2D uMaskTexture;
+uniform vec3 uMaskChannelSelector;
+#endif
 
 #ifdef HAS_TEXTURE
 uniform sampler2D uTexture;
@@ -240,6 +289,12 @@ void main() {
     float b = ring * (1.0 - smoothstep(0.35, 0.4 + uOffset * (1.0 + anim), dist));
     float a = max(max(r, g), b) * 0.6;
     gl_FragColor = vec4(r * 0.9, g * 0.7, b * 1.0, a);
+  #endif
+
+  #ifdef HAS_MASK
+  vec4 maskSample = texture2D(uMaskTexture, vUv);
+  float maskValue = dot(maskSample.rgb, uMaskChannelSelector);
+  gl_FragColor.a *= maskValue;
   #endif
 }
 `;
@@ -307,7 +362,8 @@ const PRESET_REGISTRY: Record<ShaderPresetName, ShaderPresetDefinition> = {
 export function resolveShaderPreset(
   presetName: string,
   presetParams?: Record<string, unknown>,
-  hasTexture?: boolean
+  hasTexture?: boolean,
+  hasMask?: boolean
 ): ResolvedPreset | null {
   const definition = PRESET_REGISTRY[presetName as ShaderPresetName];
   if (!definition) {
@@ -324,6 +380,9 @@ export function resolveShaderPreset(
   let fragmentShader = definition.fragmentShader;
   if (hasTexture) {
     fragmentShader = "#define HAS_TEXTURE\n" + fragmentShader;
+  }
+  if (hasMask) {
+    fragmentShader = "#define HAS_MASK\n" + fragmentShader;
   }
 
   return {

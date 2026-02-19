@@ -143,6 +143,24 @@ export default function Home() {
             space: "viewport",
           },
           {
+            id: "masked-water",
+            preset: "waterRipple",
+            presetParams: { uSpeed: 0.8, uAmplitude: 0.015 },
+            maskSrc: "/maps/demo-mask.png",
+            maskChannel: "r",
+            zIndex: 1.5,
+            space: "map",
+          },
+          {
+            id: "masked-glow",
+            preset: "glow",
+            presetParams: { uIntensity: 0.6, uGlowColor: [0.2, 1.0, 0.3] },
+            maskSrc: "/maps/demo-mask.png",
+            maskChannel: "g",
+            zIndex: 1.5,
+            space: "map",
+          },
+          {
             id: "vignette",
             space: "viewport",
             fragmentShader: `
