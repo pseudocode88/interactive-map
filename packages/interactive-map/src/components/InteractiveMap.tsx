@@ -35,6 +35,7 @@ export function InteractiveMap({
   spriteEffects,
   fogEffects,
   particleEffects,
+  shaderEffects,
   onMarkerClick,
   resetZoomTrigger,
 }: InteractiveMapProps) {
@@ -168,6 +169,7 @@ export function InteractiveMap({
             spriteEffects={spriteEffects}
             fogEffects={fogEffects}
             particleEffects={particleEffects}
+            shaderEffects={shaderEffects}
             onMarkerClick={(markerId) => {
               const marker = markersById.get(markerId);
               if (!marker) {

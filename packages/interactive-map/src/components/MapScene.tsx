@@ -7,6 +7,7 @@ import type {
   ParticleEffectConfig,
   PanConfig,
   ParallaxConfig,
+  ShaderEffectConfig,
   SpriteEffectConfig,
   ZoomConfig,
 } from "../types";
@@ -16,6 +17,7 @@ import { FogEffect } from "./FogEffect";
 import { MapLayerMesh } from "./MapLayerMesh";
 import { MarkerDot } from "./MarkerDot";
 import { ParticleEffect } from "./ParticleEffect";
+import { ShaderEffect } from "./ShaderEffect";
 import { SpriteEffect } from "./SpriteEffect";
 
 interface MapSceneProps {
@@ -34,6 +36,7 @@ interface MapSceneProps {
   spriteEffects?: SpriteEffectConfig[];
   fogEffects?: FogEffectConfig[];
   particleEffects?: ParticleEffectConfig[];
+  shaderEffects?: ShaderEffectConfig[];
   onMarkerClick?: (markerId: string) => void;
   onMarkerHoverChange?: (markerId: string | null) => void;
   focusTarget?: { x: number; y: number } | null;
@@ -59,6 +62,7 @@ export function MapScene({
   spriteEffects,
   fogEffects,
   particleEffects,
+  shaderEffects,
   onMarkerClick,
   onMarkerHoverChange,
   focusTarget,
@@ -205,6 +209,33 @@ export function MapScene({
             parallaxMode={parallaxConfig?.mode}
             viewportRef={viewportRef}
             layerOffset={layerOffset}
+          />
+        );
+      })}
+      {(shaderEffects ?? []).map((effect) => {
+        const parallaxFactor =
+          !parallaxConfig || effect.parallaxFactor !== undefined
+            ? (effect.parallaxFactor ?? 1)
+            : computeParallaxFactor(
+                {
+                  id: effect.id,
+                  src: effect.src ?? "",
+                  zIndex: effect.zIndex ?? 12,
+                  parallaxFactor: effect.parallaxFactor,
+                },
+                baseLayerZIndex,
+                parallaxConfig.intensity
+              );
+
+        return (
+          <ShaderEffect
+            key={effect.id}
+            config={effect}
+            baseWidth={baseWidth}
+            baseHeight={baseHeight}
+            parallaxFactor={parallaxFactor}
+            parallaxMode={parallaxConfig?.mode}
+            viewportRef={viewportRef}
           />
         );
       })}

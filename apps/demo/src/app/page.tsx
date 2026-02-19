@@ -134,6 +134,25 @@ export default function Home() {
             opacity: 0.8,
           },
         ]}
+        shaderEffects={[
+          {
+            id: "vignette",
+            fragmentShader: `
+              uniform float uTime;
+              uniform vec2 uResolution;
+              varying vec2 vUv;
+
+              void main() {
+                vec2 center = vUv - 0.5;
+                float dist = length(center);
+                float pulse = 0.85 + 0.15 * sin(uTime * 0.5);
+                float vignette = smoothstep(0.4 * pulse, 0.7, dist);
+                gl_FragColor = vec4(0.0, 0.0, 0.0, vignette * 0.4);
+              }
+            `,
+            zIndex: 15,
+          },
+        ]}
         onMarkerClick={(markerId) => {
           console.log("[demo] marker clicked:", markerId);
           setSelectedMarkerId(markerId);

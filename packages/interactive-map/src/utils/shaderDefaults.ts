@@ -34,3 +34,31 @@ export function buildLayerShaderUniforms(
 
   return autoUniforms;
 }
+
+/**
+ * Builds the set of auto-injected uniforms for a standalone shader effect.
+ * Unlike layer shaders, uTexture is only included when a texture is provided.
+ * Custom uniforms from the user's config are merged on top (user wins on collision).
+ */
+export function buildStandaloneShaderUniforms(
+  quadWidth: number,
+  quadHeight: number,
+  texture?: import("three").Texture | null,
+  customUniforms?: Record<string, { value: unknown }>
+): Record<string, { value: unknown }> {
+  const autoUniforms: Record<string, { value: unknown }> = {
+    uTime: { value: 0 },
+    uResolution: { value: [quadWidth, quadHeight] },
+    uViewport: { value: [0, 0, 1] },
+  };
+
+  if (texture) {
+    autoUniforms.uTexture = { value: texture };
+  }
+
+  if (customUniforms) {
+    return { ...autoUniforms, ...customUniforms };
+  }
+
+  return autoUniforms;
+}

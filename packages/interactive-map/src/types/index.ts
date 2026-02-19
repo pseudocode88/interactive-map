@@ -317,6 +317,59 @@ export interface ParticleEffectConfig {
   opacity?: number;
 }
 
+export interface ShaderEffectConfig {
+  /** Unique ID for this shader effect */
+  id: string;
+  /** GLSL fragment shader source. Required. */
+  fragmentShader: string;
+  /** GLSL vertex shader source. If omitted, a default passthrough vertex shader is used. */
+  vertexShader?: string;
+  /**
+   * Optional texture URL (PNG). If provided, the texture is loaded and injected as `uTexture` (sampler2D).
+   * If omitted, `uTexture` is not available in the shader.
+   */
+  src?: string;
+  /**
+   * Optional rectangular region in base image pixel coordinates.
+   * If omitted, the shader quad covers the entire base image (baseWidth x baseHeight).
+   */
+  region?: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+  /**
+   * Additional custom uniforms to pass to the shader.
+   * Values can be numbers, arrays (vec2/vec3/vec4), or Three.js objects (Color, Texture, etc.).
+   * These are merged with the auto-injected uniforms. Custom values take precedence on collision.
+   */
+  uniforms?: Record<string, { value: unknown }>;
+  /** Whether the material should use transparent blending. Default: true */
+  transparent?: boolean;
+  /** Whether to write to the depth buffer. Default: false */
+  depthWrite?: boolean;
+  /** zIndex for depth ordering (same system as MapLayer). Default: 12 */
+  zIndex?: number;
+  /**
+   * Override the auto-calculated parallax factor for this shader effect.
+   * Only used when parallaxConfig is provided on the map.
+   * 1.0 = moves with camera. < 1 = slower (farther). > 1 = faster (closer).
+   */
+  parallaxFactor?: number;
+  /**
+   * Optional preset name (for Chunk 7d-3). When set, vertexShader/fragmentShader are ignored
+   * and the preset's shaders are used instead.
+   * Reserved for future use - not implemented in this chunk.
+   */
+  preset?: string;
+  /**
+   * Optional preset-specific parameters (for Chunk 7d-3).
+   * Reserved for future use - not implemented in this chunk.
+   */
+  presetParams?: Record<string, unknown>;
+}
+
 export interface InteractiveMapProps {
   layers: MapLayer[];
   /** ID of the layer to use as the viewport reference. If not provided, defaults to the layer with the lowest zIndex. */
@@ -336,6 +389,8 @@ export interface InteractiveMapProps {
   fogEffects?: FogEffectConfig[];
   /** Array of particle effect configurations (sparkles, embers, fairy dust, etc.) */
   particleEffects?: ParticleEffectConfig[];
+  /** Array of standalone shader effect configurations */
+  shaderEffects?: ShaderEffectConfig[];
   /** Called when a marker is clicked. Receives the marker ID. */
   onMarkerClick?: (markerId: string) => void;
   /**
