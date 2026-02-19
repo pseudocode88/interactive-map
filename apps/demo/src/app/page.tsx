@@ -136,6 +136,13 @@ export default function Home() {
         ]}
         shaderEffects={[
           {
+            id: "water-overlay",
+            preset: "waterRipple",
+            presetParams: { uSpeed: 0.8, uAmplitude: 0.015 },
+            zIndex: 9,
+            space: "viewport",
+          },
+          {
             id: "vignette",
             space: "viewport",
             fragmentShader: `

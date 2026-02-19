@@ -3,6 +3,8 @@ export {
   DEFAULT_LAYER_VERTEX_SHADER,
   buildStandaloneShaderUniforms,
 } from "./utils/shaderDefaults";
+export { resolveShaderPreset } from "./utils/shaderPresets";
+export type { ResolvedPreset } from "./utils/shaderPresets";
 export type {
   BounceAnimation,
   CarouselAnimation,
@@ -21,6 +23,7 @@ export type {
   ParallaxConfig,
   PanConfig,
   ShaderEffectConfig,
+  ShaderPresetName,
   SpriteEffectConfig,
   WobbleAnimation,
   ZoomConfig,

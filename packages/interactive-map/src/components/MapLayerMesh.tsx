@@ -19,6 +19,7 @@ import {
   buildLayerShaderUniforms,
   DEFAULT_LAYER_VERTEX_SHADER,
 } from "../utils/shaderDefaults";
+import { resolveShaderPreset } from "../utils/shaderPresets";
 
 interface MapLayerMeshProps {
   src: string;
@@ -108,31 +109,63 @@ export function MapLayerMesh({
     return texture;
   }, [autoScale, texture]);
 
+  const resolvedPreset = useMemo(() => {
+    if (!shaderConfig?.preset) {
+      return null;
+    }
+
+    return resolveShaderPreset(
+      shaderConfig.preset,
+      shaderConfig.presetParams,
+      true
+    );
+  }, [shaderConfig?.preset, shaderConfig?.presetParams]);
+
+  const effectiveVertexShader =
+    resolvedPreset?.vertexShader ??
+    shaderConfig?.vertexShader ??
+    DEFAULT_LAYER_VERTEX_SHADER;
+
+  const effectiveFragmentShader =
+    resolvedPreset?.fragmentShader ?? shaderConfig?.fragmentShader ?? "";
+
   const shaderUniforms = useMemo(() => {
     if (!shaderConfig) {
       return null;
     }
+    if (!shaderConfig.preset && !shaderConfig.fragmentShader) {
+      return null;
+    }
 
-    return buildLayerShaderUniforms(
+    const autoUniforms = buildLayerShaderUniforms(
       processedTexture,
       textureWidth,
-      textureHeight,
-      shaderConfig.uniforms
+      textureHeight
     );
-  }, [processedTexture, shaderConfig, textureHeight, textureWidth]);
+    const presetUniforms = resolvedPreset?.uniforms ?? {};
+    const customUniforms = shaderConfig.uniforms ?? {};
+
+    return { ...autoUniforms, ...presetUniforms, ...customUniforms };
+  }, [processedTexture, shaderConfig, resolvedPreset, textureHeight, textureWidth]);
 
   const cloneShaderUniforms = useMemo(() => {
     if (!shaderConfig) {
       return null;
     }
+    if (!shaderConfig.preset && !shaderConfig.fragmentShader) {
+      return null;
+    }
 
-    return buildLayerShaderUniforms(
+    const autoUniforms = buildLayerShaderUniforms(
       processedTexture,
       textureWidth,
-      textureHeight,
-      shaderConfig.uniforms
+      textureHeight
     );
-  }, [processedTexture, shaderConfig, textureHeight, textureWidth]);
+    const presetUniforms = resolvedPreset?.uniforms ?? {};
+    const customUniforms = shaderConfig.uniforms ?? {};
+
+    return { ...autoUniforms, ...presetUniforms, ...customUniforms };
+  }, [processedTexture, shaderConfig, resolvedPreset, textureHeight, textureWidth]);
 
   const resolvedEasings = useMemo(
     () =>
@@ -275,8 +308,8 @@ export function MapLayerMesh({
         {shaderConfig && shaderUniforms ? (
           <shaderMaterial
             ref={shaderMaterialRef}
-            vertexShader={shaderConfig.vertexShader ?? DEFAULT_LAYER_VERTEX_SHADER}
-            fragmentShader={shaderConfig.fragmentShader}
+            vertexShader={effectiveVertexShader}
+            fragmentShader={effectiveFragmentShader}
             uniforms={shaderUniforms}
             transparent={shaderConfig.transparent ?? true}
             depthWrite={shaderConfig.depthWrite ?? false}
@@ -291,8 +324,8 @@ export function MapLayerMesh({
           {shaderConfig && cloneShaderUniforms ? (
             <shaderMaterial
               ref={cloneShaderMaterialRef}
-              vertexShader={shaderConfig.vertexShader ?? DEFAULT_LAYER_VERTEX_SHADER}
-              fragmentShader={shaderConfig.fragmentShader}
+              vertexShader={effectiveVertexShader}
+              fragmentShader={effectiveFragmentShader}
               uniforms={cloneShaderUniforms}
               transparent={shaderConfig.transparent ?? true}
               depthWrite={shaderConfig.depthWrite ?? false}

@@ -15,6 +15,7 @@ import {
   buildStandaloneShaderUniforms,
 } from "../utils/shaderDefaults";
 import { computeParallaxScale } from "../utils/parallax";
+import { resolveShaderPreset } from "../utils/shaderPresets";
 
 interface ShaderEffectProps {
   config: ShaderEffectConfig;
@@ -85,10 +86,31 @@ function ShaderEffectInner({
 
   const zIndex = config.zIndex ?? 12;
 
-  const shaderUniforms = useMemo(
-    () => buildStandaloneShaderUniforms(quadWidth, quadHeight, texture, config.uniforms),
-    [quadWidth, quadHeight, texture, config.uniforms]
-  );
+  const resolvedPreset = useMemo(() => {
+    if (!config.preset) {
+      return null;
+    }
+
+    return resolveShaderPreset(config.preset, config.presetParams, !!texture);
+  }, [config.preset, config.presetParams, texture]);
+
+  const effectiveVertexShader =
+    resolvedPreset?.vertexShader ?? config.vertexShader ?? DEFAULT_LAYER_VERTEX_SHADER;
+
+  const effectiveFragmentShader =
+    resolvedPreset?.fragmentShader ?? config.fragmentShader ?? "";
+
+  const shaderUniforms = useMemo(() => {
+    const autoUniforms = buildStandaloneShaderUniforms(quadWidth, quadHeight, texture);
+    const presetUniforms = resolvedPreset?.uniforms ?? {};
+    const customUniforms = config.uniforms ?? {};
+
+    return { ...autoUniforms, ...presetUniforms, ...customUniforms };
+  }, [quadWidth, quadHeight, texture, resolvedPreset, config.uniforms]);
+
+  if (!config.preset && !config.fragmentShader) {
+    return null;
+  }
 
   useFrame((_, delta) => {
     if (!meshRef.current) {
@@ -150,8 +172,8 @@ function ShaderEffectInner({
       <planeGeometry args={[quadWidth, quadHeight]} />
       <shaderMaterial
         ref={shaderMaterialRef}
-        vertexShader={config.vertexShader ?? DEFAULT_LAYER_VERTEX_SHADER}
-        fragmentShader={config.fragmentShader}
+        vertexShader={effectiveVertexShader}
+        fragmentShader={effectiveFragmentShader}
         uniforms={shaderUniforms}
         transparent={config.transparent ?? true}
         depthWrite={config.depthWrite ?? false}

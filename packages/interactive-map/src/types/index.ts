@@ -61,6 +61,14 @@ export type LayerAnimation =
   | FadeAnimation
   | WobbleAnimation;
 
+/** Available built-in shader preset names */
+export type ShaderPresetName =
+  | "waterRipple"
+  | "heatHaze"
+  | "glow"
+  | "dissolve"
+  | "chromaticAberration";
+
 /**
  * Custom shader configuration for a map layer.
  * When provided, the layer uses ShaderMaterial instead of meshBasicMaterial.
@@ -74,8 +82,8 @@ export type LayerAnimation =
 export interface LayerShaderConfig {
   /** GLSL vertex shader source. If omitted, a default passthrough vertex shader is used. */
   vertexShader?: string;
-  /** GLSL fragment shader source. Required. */
-  fragmentShader: string;
+  /** GLSL fragment shader source. Required when `preset` is not set. */
+  fragmentShader?: string;
   /**
    * Additional custom uniforms to pass to the shader.
    * Values can be numbers, arrays (vec2/vec3/vec4), or Three.js objects (Color, Texture, etc.).
@@ -88,14 +96,15 @@ export interface LayerShaderConfig {
   /** Whether to write to the depth buffer. Default: false */
   depthWrite?: boolean;
   /**
-   * Optional preset name (for Chunk 7d-3). When set, vertexShader/fragmentShader are ignored
-   * and the preset's shaders are used instead.
-   * Reserved for future use - not implemented in this chunk.
+   * Built-in shader preset name. When set, the preset's vertex/fragment shaders are used
+   * instead of `vertexShader`/`fragmentShader`. If both `preset` and `fragmentShader` are
+   * provided, `preset` takes priority.
    */
-  preset?: string;
+  preset?: ShaderPresetName;
   /**
-   * Optional preset-specific parameters (for Chunk 7d-3).
-   * Reserved for future use - not implemented in this chunk.
+   * Preset-specific parameters. Each preset has its own set of configurable params with
+   * sensible defaults. Any params not provided use the preset's defaults.
+   * See `ShaderPresetName` for available presets and their parameters.
    */
   presetParams?: Record<string, unknown>;
 }
@@ -320,8 +329,8 @@ export interface ParticleEffectConfig {
 export interface ShaderEffectConfig {
   /** Unique ID for this shader effect */
   id: string;
-  /** GLSL fragment shader source. Required. */
-  fragmentShader: string;
+  /** GLSL fragment shader source. Required when `preset` is not set. */
+  fragmentShader?: string;
   /** GLSL vertex shader source. If omitted, a default passthrough vertex shader is used. */
   vertexShader?: string;
   /**
@@ -365,14 +374,15 @@ export interface ShaderEffectConfig {
    */
   parallaxFactor?: number;
   /**
-   * Optional preset name (for Chunk 7d-3). When set, vertexShader/fragmentShader are ignored
-   * and the preset's shaders are used instead.
-   * Reserved for future use - not implemented in this chunk.
+   * Built-in shader preset name. When set, the preset's vertex/fragment shaders are used
+   * instead of `vertexShader`/`fragmentShader`. If both `preset` and `fragmentShader` are
+   * provided, `preset` takes priority.
    */
-  preset?: string;
+  preset?: ShaderPresetName;
   /**
-   * Optional preset-specific parameters (for Chunk 7d-3).
-   * Reserved for future use - not implemented in this chunk.
+   * Preset-specific parameters. Each preset has its own set of configurable params with
+   * sensible defaults. Any params not provided use the preset's defaults.
+   * See `ShaderPresetName` for available presets and their parameters.
    */
   presetParams?: Record<string, unknown>;
 }
