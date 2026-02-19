@@ -147,7 +147,7 @@ export default function Home() {
                 vec2 center = vUv - 0.5;
                 float dist = length(center);
                 float pulse = 0.85 + 0.15 * sin(uTime * 0.5);
-                float vignette = smoothstep(0.4 * pulse, 0.7, dist);
+                float vignette = smoothstep(0.5 * pulse, 0.9, dist);
                 gl_FragColor = vec4(0.0, 0.0, 0.0, vignette * 0.4);
               }
             `,
