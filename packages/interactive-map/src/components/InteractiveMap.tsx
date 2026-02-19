@@ -1,7 +1,7 @@
 "use client";
 
 import { Canvas } from "@react-three/fiber";
-import { Suspense, useContext, useMemo, useRef, useState } from "react";
+import { Suspense, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { NoToneMapping } from "three";
 
 import type {
@@ -55,6 +55,13 @@ function InteractiveMapContent({
   const viewportRef = useRef({ x: 0, y: 0, zoom: zoomConfig?.initialZoom ?? 1 });
   const [focusTarget, setFocusTarget] = useState<{ x: number; y: number } | null>(null);
   const [hoveredMarkerId, setHoveredMarkerId] = useState<string | null>(null);
+  const [loadingFadeComplete, setLoadingFadeComplete] = useState(!shouldShowLoadingScreen);
+
+  useEffect(() => {
+    if (!shouldShowLoadingScreen) {
+      setLoadingFadeComplete(true);
+    }
+  }, [shouldShowLoadingScreen]);
 
   const baseLayer = useMemo(() => {
     if (layers.length === 0) {
@@ -111,10 +118,17 @@ function InteractiveMapContent({
     minZoom: resolvedMinZoom,
     maxZoom: resolvedMaxZoom,
     initialZoom: resolvedInitialZoom,
+    animateIntroZoom: zoomConfig?.animateIntroZoom ?? false,
     scrollSpeed: zoomConfig?.scrollSpeed ?? 0.001,
     easingFactor: zoomConfig?.easingFactor ?? 0.15,
     focusEasingFactor: zoomConfig?.focusEasingFactor ?? 0.05,
   };
+  const introZoomActive = resolvedZoomConfig.animateIntroZoom && !loadingFadeComplete;
+  const effectiveZoomConfig = introZoomActive
+    ? { ...resolvedZoomConfig, initialZoom: resolvedMinZoom }
+    : resolvedZoomConfig;
+  const introZoomTrigger =
+    resolvedZoomConfig.animateIntroZoom && loadingFadeComplete ? 1 : 0;
   const resolvedParallaxConfig: Required<ParallaxConfig> | undefined = parallaxConfig
     ? {
         intensity: parallaxConfig.intensity ?? 0.3,
@@ -177,7 +191,7 @@ function InteractiveMapContent({
               baseLayerId={baseLayer.id}
               baseLayerZIndex={baseLayer.zIndex}
               panConfig={resolvedPanConfig}
-              zoomConfig={resolvedZoomConfig}
+              zoomConfig={effectiveZoomConfig}
               parallaxConfig={resolvedParallaxConfig}
               viewportRef={viewportRef}
               markers={markers}
@@ -204,6 +218,7 @@ function InteractiveMapContent({
               onFocusComplete={() => setFocusTarget(null)}
               onFocusInterrupted={() => setFocusTarget(null)}
               resetZoomTrigger={resetZoomTrigger}
+              introZoomTrigger={introZoomTrigger}
               onViewportChange={(viewport) => {
                 viewportRef.current = viewport;
               }}
@@ -212,7 +227,11 @@ function InteractiveMapContent({
         </LoadingManagerBridge>
       </Canvas>
       {shouldShowLoadingScreen && loadingManager ? (
-        <LoadingOverlay messages={loadingMessages} loadingStyle={loadingStyle} />
+        <LoadingOverlay
+          messages={loadingMessages}
+          loadingStyle={loadingStyle}
+          onFadeComplete={() => setLoadingFadeComplete(true)}
+        />
       ) : null}
       <MarkerTooltip
         marker={hoveredMarker}

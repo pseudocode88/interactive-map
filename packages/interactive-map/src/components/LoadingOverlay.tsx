@@ -31,6 +31,7 @@ const FALLBACK_STATE: LoadingManagerState = {
 interface LoadingOverlayProps {
   messages?: string[];
   loadingStyle?: LoadingStyleConfig;
+  onFadeComplete?: () => void;
 }
 
 function getMessageForProgress(progress: number, messages: string[]): string {
@@ -50,7 +51,7 @@ function getMessageForProgress(progress: number, messages: string[]): string {
   return messages[messageIndex] ?? "";
 }
 
-export function LoadingOverlay({ messages, loadingStyle }: LoadingOverlayProps) {
+export function LoadingOverlay({ messages, loadingStyle, onFadeComplete }: LoadingOverlayProps) {
   const manager = useContext(LoadingManagerContext);
   const [mounted, setMounted] = useState(true);
   const [isFadingOut, setIsFadingOut] = useState(false);
@@ -76,12 +77,13 @@ export function LoadingOverlay({ messages, loadingStyle }: LoadingOverlayProps) 
     setIsFadingOut(true);
     const timeoutId = window.setTimeout(() => {
       setMounted(false);
+      onFadeComplete?.();
     }, 400);
 
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [state.isComplete]);
+  }, [onFadeComplete, state.isComplete]);
 
   if (!manager || !mounted) {
     return null;

@@ -321,7 +321,13 @@ export default function Home() {
         resetZoomTrigger={resetZoomTrigger}
         baseLayerId="base"
         panConfig={{ enabled: true, easingFactor: 0.15 }}
-        zoomConfig={{ enabled: true, minZoom: 1, maxZoom: 1.6, initialZoom: 1.1 }}
+        zoomConfig={{
+          enabled: true,
+          minZoom: 1,
+          maxZoom: 1.6,
+          initialZoom: 1.1,
+          animateIntroZoom: true,
+        }}
         parallaxConfig={{ intensity: 0.3, mode: "depth" }}
       />
 

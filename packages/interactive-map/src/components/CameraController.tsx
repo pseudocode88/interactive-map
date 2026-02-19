@@ -20,6 +20,8 @@ interface CameraControllerProps {
   onFocusInterrupted?: () => void;
   /** Increment to reset viewport to initial load state (initialZoom and centered pan). */
   resetZoomTrigger?: number;
+  /** Increment-like value that triggers intro animation to initialZoom when it changes to a positive number. */
+  introZoomTrigger?: number;
 }
 
 interface Point {
@@ -89,6 +91,7 @@ export function CameraController({
   onFocusComplete,
   onFocusInterrupted,
   resetZoomTrigger,
+  introZoomTrigger,
 }: CameraControllerProps) {
   const { camera, size, gl } = useThree();
   const orthoCamera = camera as OrthographicCamera;
@@ -111,7 +114,9 @@ export function CameraController({
   const currentZoom = useRef<number>(zoomConfig.initialZoom);
   const isFocusing = useRef(false);
   const isProgrammaticAnim = useRef(false);
+  const hasInitializedZoom = useRef(false);
   const previousResetTrigger = useRef(resetZoomTrigger);
+  const previousIntroTrigger = useRef(introZoomTrigger);
   const dragState = useRef({
     isDragging: false,
     previousScreenPoint: { x: 0, y: 0 },
@@ -154,6 +159,11 @@ export function CameraController({
   };
 
   useEffect(() => {
+    if (hasInitializedZoom.current) {
+      return;
+    }
+
+    hasInitializedZoom.current = true;
     currentZoom.current = zoomConfig.initialZoom;
     targetZoom.current = zoomConfig.initialZoom;
     applyFrustumForZoom(zoomConfig.initialZoom);
@@ -211,6 +221,19 @@ export function CameraController({
     isFocusing.current = false;
     isProgrammaticAnim.current = true;
   }, [resetZoomTrigger, zoomConfig.initialZoom]);
+
+  useEffect(() => {
+    if (introZoomTrigger === previousIntroTrigger.current) {
+      return;
+    }
+
+    previousIntroTrigger.current = introZoomTrigger;
+
+    if (introZoomTrigger && introZoomTrigger > 0) {
+      targetZoom.current = zoomConfig.initialZoom;
+      isProgrammaticAnim.current = true;
+    }
+  }, [introZoomTrigger, zoomConfig.initialZoom]);
 
   useEffect(() => {
     if (!zoomConfig.enabled) {

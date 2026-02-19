@@ -52,6 +52,7 @@ interface MapSceneProps {
   onFocusComplete?: () => void;
   onFocusInterrupted?: () => void;
   resetZoomTrigger?: number;
+  introZoomTrigger?: number;
   onViewportChange?: (viewport: { x: number; y: number; zoom: number }) => void;
 }
 
@@ -83,6 +84,7 @@ export function MapScene({
   onFocusComplete,
   onFocusInterrupted,
   resetZoomTrigger,
+  introZoomTrigger,
   onViewportChange,
 }: MapSceneProps) {
   const { registerStage, updateStageProgress, completeStage } = useLoadingManager();
@@ -317,6 +319,7 @@ export function MapScene({
         onFocusComplete={onFocusComplete}
         onFocusInterrupted={onFocusInterrupted}
         resetZoomTrigger={resetZoomTrigger}
+        introZoomTrigger={introZoomTrigger}
         onViewportChange={(viewport) => onViewportChange?.(viewport)}
       />
       {sortedLayers.map((layer) => {
