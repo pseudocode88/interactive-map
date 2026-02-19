@@ -3,6 +3,7 @@ Name: Chunk 8d — Layer-Pinned Mask Effects
 Type: Feature
 Created On: 2026-02-19
 Modified On: 2026-02-19
+Review Fixes Added: 2026-02-19
 ---
 
 # Brief
@@ -910,7 +911,90 @@ maskEffects={[
 
 Use whichever layer ID exists in the demo. The key thing to demonstrate: when panning/zooming with parallax enabled (or carousel if applicable), the pinned effects move **exactly** with the layer — no drift.
 
-## Step 9: Verify Behavior
+## Step 9: Review Fixes
+
+These are post-implementation review fixes to address minor issues found during code review.
+
+### 9a. Fix `maskBehavior` default inconsistency in `PinnedParticleEffect`
+
+**File:** `packages/interactive-map/src/components/PinnedParticleEffect.tsx`
+
+The `PinnedParticleEffectConfig` type documents the default `maskBehavior` as `"both"`, but the component's runtime default is `"spawn"`. Change the default to match the documented behavior.
+
+**Before:**
+```ts
+const maskBehavior = config.maskBehavior ?? "spawn";
+```
+
+**After:**
+```ts
+const maskBehavior = config.maskBehavior ?? "both";
+```
+
+> **Note:** The resolver at `maskEffectResolver.ts` always explicitly sets `maskBehavior: config.maskBehavior ?? "both"`, so this only affects direct usage of `PinnedParticleEffect`. But the runtime default should match the type documentation to avoid confusion.
+
+### 9b. Remove unused `viewportRef` prop from `PinnedParticleEffect`
+
+**File:** `packages/interactive-map/src/components/PinnedParticleEffect.tsx`
+
+The `viewportRef` prop is accepted but never meaningfully used — the only reference is a no-op `void viewportRef.current;`. Since pinned particles inherit all transforms from the parent mesh and don't need viewport data, remove it.
+
+1. Remove `viewportRef` from the `PinnedParticleEffectProps` interface:
+
+```ts
+interface PinnedParticleEffectProps {
+  config: PinnedParticleEffectConfig;
+  /** Width of the parent layer's geometry (includes autoScale) */
+  geoWidth: number;
+  /** Height of the parent layer's geometry (includes autoScale) */
+  geoHeight: number;
+}
+```
+
+2. Remove `viewportRef` from the destructured props in the component function signature.
+
+3. Remove the no-op `void viewportRef.current;` line from the `useFrame` callback.
+
+**File:** `packages/interactive-map/src/components/MapLayerMesh.tsx`
+
+4. Update all `<PinnedParticleEffect>` render sites (main mesh and carousel clone) to stop passing `viewportRef`:
+
+**Before:**
+```tsx
+<PinnedParticleEffect
+  key={effect.id}
+  config={effect}
+  geoWidth={geoWidth}
+  geoHeight={geoHeight}
+  viewportRef={viewportRef}
+/>
+```
+
+**After:**
+```tsx
+<PinnedParticleEffect
+  key={effect.id}
+  config={effect}
+  geoWidth={geoWidth}
+  geoHeight={geoHeight}
+/>
+```
+
+Apply the same change to the carousel clone instance (with `key={`${effect.id}-clone`}`).
+
+### 9c. Add note about carousel clone particle state divergence
+
+**File:** `packages/interactive-map/src/components/MapLayerMesh.tsx`
+
+This is a documentation-only change. Add a comment above the carousel clone's pinned effects to clarify that clone particles have independent random state:
+
+```tsx
+{/* Pinned effects on the clone have independent particle state (different random positions).
+    This is acceptable because both meshes are rarely visible simultaneously during carousel wrap. */}
+{pinnedEffects?.shaderEffects.map((effect) => (
+```
+
+## Step 10: Verify Behavior
 
 No code changes — verification during testing:
 
@@ -939,7 +1023,11 @@ No code changes — verification during testing:
 12. Standalone (non-pinned) mask effects continue to work as before.
 13. Demo showcases a pinned mask effect on a layer.
 14. The app builds without errors (`pnpm build`).
+15. `PinnedParticleEffect` runtime default for `maskBehavior` is `"both"`, matching the type documentation.
+16. `PinnedParticleEffect` does not accept an unused `viewportRef` prop.
+17. Carousel clone's pinned effects have a comment clarifying independent particle state.
 
 # Log
 
 - **2026-02-19 (Created):** Initial plan for Chunk 8d — Layer-Pinned Mask Effects. Adds `pinnedTo` field to `MaskEffectConfig` that pins effects to a map layer via Three.js parent-child scene graph. Creates `PinnedShaderEffect` and `PinnedParticleEffect` lightweight components that skip position/parallax logic (inherited from parent). Updates `MapLayerMesh` to render pinned effects as children of the layer mesh (including carousel clone). Updates resolver to partition effects into standalone vs pinned. Extracts shared particle shaders to a utility file.
+- **2026-02-19 (Review Fixes):** Added Step 9 with three post-review fixes: (9a) Fix `maskBehavior` runtime default in `PinnedParticleEffect` from `"spawn"` to `"both"` to match type docs. (9b) Remove unused `viewportRef` prop from `PinnedParticleEffect` and its render sites in `MapLayerMesh`. (9c) Add clarifying comment about carousel clone having independent particle random state.

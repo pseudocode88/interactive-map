@@ -21,7 +21,7 @@ const layers = [
     id: "cloud-front",
     src: "/overlay.png",
     zIndex: 1,
-    position: { x: 0, y: 0 },
+    // position: { x: 0, y: 0 },
     animation: [
       // {
       //   type: "wobble" as const,
@@ -42,7 +42,7 @@ const layers = [
         speed: 40,
         easing: "ease-in-out" as const,
       },
-      { type: "fade" as const, minOpacity: 0.8, maxOpacity: 1, duration: 10 }
+      { type: "fade" as const, minOpacity: 0.8, maxOpacity: 1, duration: 5 }
     ],
   },
   {
@@ -107,7 +107,7 @@ export default function Home() {
           //   id: "sparkles",
           //   mode: "twinkle",
           //   maxCount: 40,
-          //   color: "#FFD700",
+          //   color: "#fff",
           //   size: 7,
           //   sizeVariance: 0.5,
           //   twinkleDuration: 2,
@@ -116,23 +116,23 @@ export default function Home() {
           //   zIndex: 11,
           //   opacity: 0.9,
           // },
-          // {
-          //   id: "embers",
-          //   mode: "drift",
-          //   maxCount: 40,
-          //   color: "#FFD700",
-          //   size: 7,
-          //   sizeVariance: 0.4,
-          //   driftDirection: { x: 0.1, y: 1 },
-          //   driftDirectionVariance: 20,
-          //   driftSpeed: 25,
-          //   driftSpeedVariance: 0.3,
-          //   driftDistance: 120,
-          //   regionMode: "container",
-          //   // region: { x: 0, y: 0, width: 1000, height: 400 },
-          //   zIndex: 11,
-          //   opacity: 0.8,
-          // },
+          {
+            id: "embers",
+            mode: "drift",
+            maxCount: 40,
+            color: "#fff",
+            size: 7,
+            sizeVariance: 0.4,
+            driftDirection: { x: 0.1, y: 1 },
+            driftDirectionVariance: 20,
+            driftSpeed: 25,
+            driftSpeedVariance: 0.3,
+            driftDistance: 120,
+            regionMode: "container",
+            // region: { x: 0, y: 0, width: 1000, height: 400 },
+            zIndex: 11,
+            opacity: 0.8,
+          },
           // Masked particles are now configured via `maskEffects`.
           // {
           //   id: "masked-embers",
@@ -150,13 +150,13 @@ export default function Home() {
           // },
         ]}
         shaderEffects={[
-          {
-            id: "water-overlay",
-            preset: "waterRipple",
-            presetParams: { uSpeed: 1, uAmplitude: 0.1 },
-            zIndex: 9,
-            space: "viewport",
-          },
+          // {
+          //   id: "water-overlay",
+          //   preset: "waterRipple",
+          //   presetParams: { uSpeed: 1, uAmplitude: 0.1 },
+          //   zIndex: 9,
+          //   space: "viewport",
+          // },
           {
             id: "vignette",
             space: "viewport",
@@ -180,52 +180,65 @@ export default function Home() {
           {
             id: "terrain-effects",
             src: "/maps/demo-mask.png",
+            pinnedTo: 'base',
             red: {
-              preset: "waterRipple",
-              presetParams: { uSpeed: 0.8, uAmplitude: 0.015 },
+              type: "particles",
+              config: {
+                mode: "twinkle",
+                maxCount: 200,
+                color: "#d3ebfe",
+                size: 5,
+                twinkleDuration: 1.5,
+                twinkleDurationVariance: 0.8,
+              },
             },
             green: {
               type: "particles",
               config: {
-                mode: "twinkle",
+                mode: "drift",
                 maxCount: 80,
-                color: "#66ffff",
-                size: 4,
-                twinkleDuration: 2.5,
+                color: "#FFD700",
+                size: 3,
+                sizeVariance: 0.4,
+                driftDirection: { x: 0.1, y: 1 },
+                driftDirectionVariance: 20,
+                driftSpeed: 25,
+                driftSpeedVariance: 0.3,
+                driftDistance: 120,
               },
             },
-            blue: {
-              preset: "glow",
-              presetParams: { uIntensity: 0.6, uGlowColor: [0.2, 1.0, 0.3] },
-            },
+            // blue: {
+            //   preset: "glow",
+            //   presetParams: { uIntensity: 0.6, uGlowColor: [0.2, 1.0, 0.3] },
+            // },
             zIndex: 1.5,
             space: "map",
             maskBehavior: "both",
           },
-          {
-            id: "cloud-front-pinned-effects",
-            src: "/maps/demo-mask.png",
-            pinnedTo: "cloud-front",
-            red: {
-              preset: "waterRipple",
-              presetParams: { uSpeed: 0.8, uAmplitude: 0.015 },
-            },
-            green: {
-              type: "particles",
-              config: {
-                mode: "twinkle",
-                maxCount: 40,
-                color: "#9af9ff",
-                size: 4,
-                twinkleDuration: 2.5,
-              },
-            },
-            blue: {
-              preset: "glow",
-              presetParams: { uIntensity: 0.55, uGlowColor: [0.35, 0.9, 1.0] },
-            },
-            maskBehavior: "both",
-          },
+          // {
+          //   id: "cloud-front-pinned-effects",
+          //   src: "/maps/demo-mask.png",
+          //   pinnedTo: "cloud-front",
+          //   red: {
+          //     preset: "waterRipple",
+          //     presetParams: { uSpeed: 0.8, uAmplitude: 0.015 },
+          //   },
+          //   green: {
+          //     type: "particles",
+          //     config: {
+          //       mode: "twinkle",
+          //       maxCount: 40,
+          //       color: "#9af9ff",
+          //       size: 4,
+          //       twinkleDuration: 2.5,
+          //     },
+          //   },
+          //   blue: {
+          //     preset: "glow",
+          //     presetParams: { uIntensity: 0.55, uGlowColor: [0.35, 0.9, 1.0] },
+          //   },
+          //   maskBehavior: "both",
+          // },
         ]}
         onMarkerClick={(markerId) => {
           console.log("[demo] marker clicked:", markerId);
