@@ -150,20 +150,20 @@
 - `utils/particles.ts` for pure particle lifecycle math
 - `ParticleEffect` component with parallax support (depth + drift modes)
 
----
-
-## Remaining Chunks
-
 ### Chunk 7d-1: Layer Shader Support
-**Status:** In Progress
-**Plan:** [chunk-7d-1-layer-shader-support-2026-02-19.md](plans/chunk-7d-1-layer-shader-support-2026-02-19.md)
+**Status:** Done
+**Plan:** [chunk-7d-1-layer-shader-support-2026-02-19.md](plans/done/chunk-7d-1-layer-shader-support-2026-02-19.md)
 
-Scope:
 - Optional `shaderConfig` on `MapLayer` to replace `meshBasicMaterial` with custom `ShaderMaterial`
 - Auto-injected uniforms: `uTime`, `uResolution`, `uTexture`, `uViewport`
 - Default passthrough vertex shader when omitted
 - Custom uniforms support with collision override
 - `utils/shaderDefaults.ts` helper
+- Separate uniforms objects for main mesh and carousel clone
+
+---
+
+## Remaining Chunks
 
 ### Chunk 7d-2: Standalone Shader Effects
 **Status:** Not Started
@@ -209,8 +209,9 @@ packages/interactive-map/src/
 │   ├── spriteSheet.ts          # Sprite sheet grid detection + frame UV calculation
 │   ├── spriteInstances.ts      # Sprite instance lifecycle (spawn, update, despawn)
 │   ├── fog.ts                  # Pure fog math (drift, opacity pulse, scale breathing)
-│   └── particles.ts            # Pure particle math (twinkle/drift lifecycle)
+│   ├── particles.ts            # Pure particle math (twinkle/drift lifecycle)
+│   └── shaderDefaults.ts       # Default vertex shader + auto-injected uniform builder
 ├── types/
-│   └── index.ts                # MapLayer, MapMarker, SpriteEffectConfig, FogEffectConfig, ParticleEffectConfig, InteractiveMapProps, etc.
+│   └── index.ts                # MapLayer, MapMarker, LayerShaderConfig, SpriteEffectConfig, FogEffectConfig, ParticleEffectConfig, InteractiveMapProps, etc.
 └── index.ts                    # Barrel exports
 ```
