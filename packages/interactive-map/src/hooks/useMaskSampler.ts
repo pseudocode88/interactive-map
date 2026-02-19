@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { loadMaskSampler, type MaskSampler } from "../utils/maskSampler";
 
 /**
@@ -8,13 +8,18 @@ import { loadMaskSampler, type MaskSampler } from "../utils/maskSampler";
  */
 export function useMaskSampler(src?: string, onLoadComplete?: () => void): MaskSampler | null {
   const [sampler, setSampler] = useState<MaskSampler | null>(null);
+  const onLoadCompleteRef = useRef(onLoadComplete);
+
+  useEffect(() => {
+    onLoadCompleteRef.current = onLoadComplete;
+  }, [onLoadComplete]);
 
   useEffect(() => {
     let hasReported = false;
     const reportComplete = () => {
       if (!hasReported) {
         hasReported = true;
-        onLoadComplete?.();
+        onLoadCompleteRef.current?.();
       }
     };
 
@@ -51,7 +56,7 @@ export function useMaskSampler(src?: string, onLoadComplete?: () => void): MaskS
       }
       setSampler(null);
     };
-  }, [onLoadComplete, src]);
+  }, [src]);
 
   return sampler;
 }

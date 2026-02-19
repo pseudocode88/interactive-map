@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { LinearFilter, SRGBColorSpace, Texture, TextureLoader } from "three";
 
 /**
@@ -7,13 +7,18 @@ import { LinearFilter, SRGBColorSpace, Texture, TextureLoader } from "three";
  */
 export function useMaskTexture(src?: string, onLoadComplete?: () => void): Texture | null {
   const [texture, setTexture] = useState<Texture | null>(null);
+  const onLoadCompleteRef = useRef(onLoadComplete);
+
+  useEffect(() => {
+    onLoadCompleteRef.current = onLoadComplete;
+  }, [onLoadComplete]);
 
   useEffect(() => {
     let hasReported = false;
     const reportComplete = () => {
       if (!hasReported) {
         hasReported = true;
-        onLoadComplete?.();
+        onLoadCompleteRef.current?.();
       }
     };
 
@@ -76,7 +81,7 @@ export function useMaskTexture(src?: string, onLoadComplete?: () => void): Textu
         return null;
       });
     };
-  }, [onLoadComplete, src]);
+  }, [src]);
 
   return texture;
 }

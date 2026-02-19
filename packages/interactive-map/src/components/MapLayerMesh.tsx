@@ -251,10 +251,15 @@ export function MapLayerMesh({
     x: position?.x ?? 0,
     y: position?.y ?? 0,
   };
+  const onTextureLoadedRef = useRef(onTextureLoaded);
 
   useEffect(() => {
-    onTextureLoaded?.();
+    onTextureLoadedRef.current = onTextureLoaded;
   }, [onTextureLoaded]);
+
+  useEffect(() => {
+    onTextureLoadedRef.current?.();
+  }, []);
 
   useFrame((_, delta) => {
     if (!meshRef.current) {
