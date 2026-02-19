@@ -368,7 +368,6 @@ export function MapLayerMesh({
             config={effect}
             geoWidth={geoWidth}
             geoHeight={geoHeight}
-            viewportRef={viewportRef}
           />
         ))}
       </mesh>
@@ -396,13 +395,14 @@ export function MapLayerMesh({
               viewportRef={viewportRef}
             />
           ))}
+          {/* Pinned effects on the clone have independent particle state (different random positions).
+              This is acceptable because both meshes are rarely visible simultaneously during carousel wrap. */}
           {pinnedEffects?.particleEffects.map((effect) => (
             <PinnedParticleEffect
               key={`${effect.id}-clone`}
               config={effect}
               geoWidth={geoWidth}
               geoHeight={geoHeight}
-              viewportRef={viewportRef}
             />
           ))}
         </mesh>

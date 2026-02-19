@@ -1,5 +1,4 @@
 import { useFrame } from "@react-three/fiber";
-import type { RefObject } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AdditiveBlending,
@@ -36,8 +35,6 @@ interface PinnedParticleEffectProps {
   geoWidth: number;
   /** Height of the parent layer's geometry (includes autoScale) */
   geoHeight: number;
-  /** Viewport ref for reading current viewport state */
-  viewportRef: RefObject<{ x: number; y: number; zoom: number }>;
 }
 
 function wrapCoordinate(value: number, size: number): number {
@@ -60,7 +57,6 @@ export function PinnedParticleEffect({
   config,
   geoWidth,
   geoHeight,
-  viewportRef,
 }: PinnedParticleEffectProps) {
   const pointsRef = useRef<Points>(null);
   const materialRef = useRef<ShaderMaterial>(null);
@@ -76,7 +72,7 @@ export function PinnedParticleEffect({
   const localZOffset = config.localZOffset ?? 0.002;
   const maskSampler = useMaskSampler(config.maskSrc);
   const maskChannel = config.maskChannel ?? "r";
-  const maskBehavior = config.maskBehavior ?? "spawn";
+  const maskBehavior = config.maskBehavior ?? "both";
   const maskThreshold = config.maskThreshold ?? 0.1;
 
   useEffect(() => {
@@ -203,7 +199,6 @@ export function PinnedParticleEffect({
   }, [config.color, opacity, texture]);
 
   useFrame((_, delta) => {
-    void viewportRef.current;
     const cappedDelta = Math.min(delta, 0.1);
     const particles = particlesRef.current;
 
