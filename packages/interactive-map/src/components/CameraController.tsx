@@ -110,6 +110,7 @@ export function CameraController({
   const targetZoom = useRef<number>(zoomConfig.initialZoom);
   const currentZoom = useRef<number>(zoomConfig.initialZoom);
   const isFocusing = useRef(false);
+  const isProgrammaticAnim = useRef(false);
   const previousResetTrigger = useRef(resetZoomTrigger);
   const dragState = useRef({
     isDragging: false,
@@ -123,6 +124,8 @@ export function CameraController({
   });
 
   const interruptFocus = () => {
+    isProgrammaticAnim.current = false;
+
     if (!isFocusing.current) {
       return;
     }
@@ -187,6 +190,7 @@ export function CameraController({
     targetPosition.current = clampedTarget;
     targetZoom.current = focusZoom;
     isFocusing.current = true;
+    isProgrammaticAnim.current = true;
   }, [
     baseFrustumHalfHeight,
     baseFrustumHalfWidth,
@@ -204,7 +208,8 @@ export function CameraController({
     previousResetTrigger.current = resetZoomTrigger;
     targetZoom.current = zoomConfig.initialZoom;
     targetPosition.current = { x: 0, y: 0 };
-    interruptFocus();
+    isFocusing.current = false;
+    isProgrammaticAnim.current = true;
   }, [resetZoomTrigger, zoomConfig.initialZoom]);
 
   useEffect(() => {
@@ -391,9 +396,13 @@ export function CameraController({
   };
 
   useFrame(() => {
+    const useSlowEasing = isProgrammaticAnim.current;
+    const zoomEasing = useSlowEasing ? zoomConfig.focusEasingFactor : zoomConfig.easingFactor;
+    const panEasing = useSlowEasing ? panConfig.focusEasingFactor : panConfig.easingFactor;
+
     const zoomDiff = targetZoom.current - currentZoom.current;
     if (Math.abs(zoomDiff) > 0.001) {
-      currentZoom.current += zoomDiff * zoomConfig.easingFactor;
+      currentZoom.current += zoomDiff * zoomEasing;
 
       const halfW = baseFrustumHalfWidth / currentZoom.current;
       const halfH = baseFrustumHalfHeight / currentZoom.current;
@@ -409,18 +418,21 @@ export function CameraController({
     const dy = targetPosition.current.y - camera.position.y;
 
     if (Math.abs(dx) > 0.01 || Math.abs(dy) > 0.01) {
-      camera.position.x += dx * panConfig.easingFactor;
-      camera.position.y += dy * panConfig.easingFactor;
+      camera.position.x += dx * panEasing;
+      camera.position.y += dy * panEasing;
     }
 
-    if (isFocusing.current) {
-      const focusDx = Math.abs(targetPosition.current.x - camera.position.x);
-      const focusDy = Math.abs(targetPosition.current.y - camera.position.y);
-      const focusZoomDiff = Math.abs(targetZoom.current - currentZoom.current);
+    if (isProgrammaticAnim.current) {
+      const animDx = Math.abs(targetPosition.current.x - camera.position.x);
+      const animDy = Math.abs(targetPosition.current.y - camera.position.y);
+      const animZoomDiff = Math.abs(targetZoom.current - currentZoom.current);
 
-      if (focusDx < 0.5 && focusDy < 0.5 && focusZoomDiff < 0.01) {
-        isFocusing.current = false;
-        onFocusComplete?.();
+      if (animDx < 0.5 && animDy < 0.5 && animZoomDiff < 0.01) {
+        isProgrammaticAnim.current = false;
+        if (isFocusing.current) {
+          isFocusing.current = false;
+          onFocusComplete?.();
+        }
       }
     }
 

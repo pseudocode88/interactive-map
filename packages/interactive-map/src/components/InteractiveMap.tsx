@@ -98,6 +98,7 @@ function InteractiveMapContent({
   const resolvedPanConfig: Required<PanConfig> = {
     enabled: panConfig?.enabled ?? true,
     easingFactor: panConfig?.easingFactor ?? 0.15,
+    focusEasingFactor: panConfig?.focusEasingFactor ?? 0.05,
   };
   const resolvedMinZoom = zoomConfig?.minZoom ?? 1;
   const resolvedMaxZoom = Math.max(zoomConfig?.maxZoom ?? 3, resolvedMinZoom);
@@ -112,6 +113,7 @@ function InteractiveMapContent({
     initialZoom: resolvedInitialZoom,
     scrollSpeed: zoomConfig?.scrollSpeed ?? 0.001,
     easingFactor: zoomConfig?.easingFactor ?? 0.15,
+    focusEasingFactor: zoomConfig?.focusEasingFactor ?? 0.05,
   };
   const resolvedParallaxConfig: Required<ParallaxConfig> | undefined = parallaxConfig
     ? {

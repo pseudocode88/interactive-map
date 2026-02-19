@@ -187,6 +187,8 @@ export interface MapLayer {
 export interface PanConfig {
   enabled?: boolean;
   easingFactor?: number;
+  /** Easing factor used during programmatic animations (marker focus & reset). Lower = slower/smoother. Default: 0.05 */
+  focusEasingFactor?: number;
 }
 
 export interface ZoomConfig {
@@ -196,6 +198,8 @@ export interface ZoomConfig {
   initialZoom?: number;
   scrollSpeed?: number;
   easingFactor?: number;
+  /** Easing factor used during programmatic animations (marker focus & reset). Lower = slower/smoother. Default: 0.05 */
+  focusEasingFactor?: number;
 }
 
 export interface ParallaxConfig {
