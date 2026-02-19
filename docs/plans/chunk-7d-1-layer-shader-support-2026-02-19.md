@@ -2,7 +2,7 @@
 Name: Chunk 7d-1 Layer Shader Support
 Type: feature
 Created On: 2026-02-19
-Modified On: 2026-02-19
+Modified On: 2026-02-19 (review fixes)
 ---
 
 # Brief
@@ -148,9 +148,9 @@ interface MapLayerMeshProps {
 
 Add `shaderConfig` to the destructured props in the function signature.
 
-### 3c. Create shader material uniforms (memoized)
+### 3c. Create shader material uniforms (memoized) — separate objects for main and clone
 
-After the existing `processedTexture` useMemo, add:
+After the existing `processedTexture` useMemo, add **two** separate uniform objects — one for the main mesh and one for the carousel clone. They must be independent objects so Three.js treats them as separate material state.
 
 ```ts
 const shaderUniforms = useMemo(() => {
@@ -163,32 +163,49 @@ const shaderUniforms = useMemo(() => {
     shaderConfig.uniforms
   );
 }, [shaderConfig, processedTexture, textureWidth, textureHeight]);
+
+const cloneShaderUniforms = useMemo(() => {
+  if (!shaderConfig) return null;
+
+  return buildLayerShaderUniforms(
+    processedTexture,
+    textureWidth,
+    textureHeight,
+    shaderConfig.uniforms
+  );
+}, [shaderConfig, processedTexture, textureWidth, textureHeight]);
 ```
 
-### 3d. Add a ref for the ShaderMaterial
+**Important:** Do NOT share the same uniforms object between the main mesh and the carousel clone. Each `ShaderMaterial` must own its own uniforms object to avoid cross-contamination if per-instance data is ever needed.
+
+### 3d. Add refs for the ShaderMaterials
 
 ```ts
 const shaderMaterialRef = useRef<ShaderMaterial>(null);
+const cloneShaderMaterialRef = useRef<ShaderMaterial>(null);
 ```
 
 ### 3e. Update uniforms every frame in `useFrame`
 
-Inside the existing `useFrame` callback, **after** the existing parallax/animation logic and **before** the closing of the callback, add:
+Inside the existing `useFrame` callback, **after** the existing parallax/animation logic and **before** the closing of the callback, update the material uniforms directly via the refs. Do NOT write to the intermediate `shaderUniforms`/`cloneShaderUniforms` objects — the ref's `.uniforms` IS the object, so write to it directly.
 
 ```ts
-// Update shader uniforms if custom shader is active
-if (shaderMaterialRef.current && shaderUniforms) {
-  shaderUniforms.uTime.value = elapsed.current;
-  shaderUniforms.uViewport.value = [viewport.x, viewport.y, viewport.zoom];
-  shaderUniforms.uResolution.value = [textureWidth, textureHeight];
-  shaderUniforms.uTexture.value = processedTexture;
+// Update main mesh shader uniforms
+if (shaderMaterialRef.current) {
+  const u = shaderMaterialRef.current.uniforms;
+  u.uTime.value = elapsed.current;
+  u.uViewport.value = [viewport.x, viewport.y, viewport.zoom];
+  u.uResolution.value = [textureWidth, textureHeight];
+  u.uTexture.value = processedTexture;
+}
 
-  // Sync auto uniforms into the material's uniform object
-  const matUniforms = shaderMaterialRef.current.uniforms;
-  matUniforms.uTime.value = shaderUniforms.uTime.value;
-  matUniforms.uViewport.value = shaderUniforms.uViewport.value;
-  matUniforms.uResolution.value = shaderUniforms.uResolution.value;
-  matUniforms.uTexture.value = shaderUniforms.uTexture.value;
+// Update clone mesh shader uniforms (separate object, same values)
+if (cloneShaderMaterialRef.current) {
+  const u = cloneShaderMaterialRef.current.uniforms;
+  u.uTime.value = elapsed.current;
+  u.uViewport.value = [viewport.x, viewport.y, viewport.zoom];
+  u.uResolution.value = [textureWidth, textureHeight];
+  u.uTexture.value = processedTexture;
 }
 ```
 
@@ -214,7 +231,27 @@ Replace the current `<mesh>` JSX return. The mesh structure stays the same, but 
 </mesh>
 ```
 
-Do the same for the carousel clone mesh (the second `<mesh>` inside the `hasCarousel` conditional). If `shaderConfig` is present, use `<shaderMaterial>` with the same props.
+Do the same for the carousel clone mesh (the second `<mesh>` inside the `hasCarousel` conditional). Use `cloneShaderMaterialRef` and `cloneShaderUniforms` (NOT the main mesh's uniforms):
+
+```tsx
+{hasCarousel ? (
+  <mesh ref={cloneRef} position={[basePosition.x, basePosition.y, zIndex * 0.01]}>
+    <planeGeometry args={[geoWidth, geoHeight]} />
+    {shaderConfig && cloneShaderUniforms ? (
+      <shaderMaterial
+        ref={cloneShaderMaterialRef}
+        vertexShader={shaderConfig.vertexShader ?? DEFAULT_LAYER_VERTEX_SHADER}
+        fragmentShader={shaderConfig.fragmentShader}
+        uniforms={cloneShaderUniforms}
+        transparent={shaderConfig.transparent ?? true}
+        depthWrite={shaderConfig.depthWrite ?? false}
+      />
+    ) : (
+      <meshBasicMaterial map={processedTexture} transparent />
+    )}
+  </mesh>
+) : null}
+```
 
 ### 3g. Handle opacity animation with shader material
 
@@ -314,3 +351,4 @@ This step is optional — only add if there is a suitable layer to test with. If
 # Log
 
 - 2026-02-19: Created plan for Chunk 7d-1 — Layer Shader Support. Covers types, default vertex shader utility, MapLayerMesh modifications, MapScene passthrough, and barrel exports.
+- 2026-02-19: Review fixes — (1) Separate uniforms objects for main mesh and carousel clone to avoid shared-reference bugs. (2) Remove redundant double-write of uniform values; update material uniforms directly via refs instead of writing to intermediate object first.
