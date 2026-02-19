@@ -107,13 +107,10 @@ function ShaderEffectInner({
 
     return { ...autoUniforms, ...presetUniforms, ...customUniforms };
   }, [quadWidth, quadHeight, texture, resolvedPreset, config.uniforms]);
-
-  if (!config.preset && !config.fragmentShader) {
-    return null;
-  }
+  const hasShader = !!config.preset || !!config.fragmentShader;
 
   useFrame((_, delta) => {
-    if (!meshRef.current) {
+    if (!meshRef.current || !hasShader) {
       return;
     }
 
@@ -166,6 +163,10 @@ function ShaderEffectInner({
       meshRef.current.scale.set(1, 1, 1);
     }
   });
+
+  if (!hasShader) {
+    return null;
+  }
 
   return (
     <mesh ref={meshRef} position={[basePosition.x, basePosition.y, zIndex * 0.01]}>
