@@ -27,15 +27,29 @@ const VIGNETTE_FRAGMENT_SHADER = `
   }
 `;
 
-const markers: MapMarker[] = [
+const BASE_MARKERS: MapMarker[] = [
   { id: "castle", x: 900, y: 1280, label: "Castle", color: "#FFC857" },
   { id: "village", x: 1900, y: 1040, label: "Village", color: "#FFC857" },
   { id: "harbor", x: 3000, y: 1260, label: "Harbor Gate", color: "#FFC857" },
   { id: "forest", x: 2250, y: 520, label: "Dark Forest", color: "#FFC857" },
 ];
 
+const MOBILE_ASSET_SCALE = 0.5;
+
 function buildMarkerMap(items: MapMarker[]) {
   return new Map(items.map((marker) => [marker.id, marker]));
+}
+
+function buildMarkers(isMobile: boolean): MapMarker[] {
+  if (!isMobile) {
+    return BASE_MARKERS;
+  }
+
+  return BASE_MARKERS.map((marker) => ({
+    ...marker,
+    x: marker.x * MOBILE_ASSET_SCALE,
+    y: marker.y * MOBILE_ASSET_SCALE,
+  }));
 }
 
 function getBaseSource(isMobile: boolean): string {
@@ -251,7 +265,8 @@ function useIsMobileViewport(): boolean {
 
 export default function Home() {
   const isMobile = useIsMobileViewport();
-  const markerMap = useMemo(() => buildMarkerMap(markers), []);
+  const markers = useMemo(() => buildMarkers(isMobile), [isMobile]);
+  const markerMap = useMemo(() => buildMarkerMap(markers), [markers]);
   const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null);
   const [resetZoomTrigger, setResetZoomTrigger] = useState(0);
   const [effectsEnabled, setEffectsEnabled] = useState(false);
