@@ -3,7 +3,8 @@
 Reusable interactive map component for React apps using Three.js via React Three Fiber.
 
 ## Install
-Add the core package plus required Three.js and React Three Fiber dependencies.
+Install the map package with its runtime rendering dependencies.  
+After install, you can import `InteractiveMap` and pass typed config objects shown below.
 
 ```bash
 pnpm add @interactive-map/core three @react-three/fiber @react-three/drei
@@ -14,7 +15,8 @@ Peer dependencies:
 - `react-dom` 18 or 19
 
 ## What It Supports
-Feature overview for interaction, rendering, effects, and performance controls.
+This gives a quick capability snapshot before diving into the API reference.  
+Use it to confirm whether the component supports your required interaction and visual-effect patterns.
 
 - Multi-layer map rendering from image assets
 - Pan + zoom with clamped camera bounds
@@ -25,7 +27,8 @@ Feature overview for interaction, rendering, effects, and performance controls.
 - Loading overlay customization and render tuning
 
 ## `InteractiveMap` Props
-Primary component API for layout, interaction, effects, loading, and renderer behavior.
+This is the top-level API you pass into `<InteractiveMap />`.  
+Each prop controls either layout, camera behavior, visual effects, loading UX, or renderer performance.
 
 ### `layers: MapLayer[]` (required)
 All map image layers. Lowest `zIndex` is used as the base layer unless `baseLayerId` is provided.
@@ -103,10 +106,12 @@ Small snippet:
 ```
 
 ## Config Categories
-Reference for each configuration object consumed by `InteractiveMap`.
+Each section below explains one config type, what it controls, and the available properties.  
+Read these in order when building a map from base layers first, then optional effects.
 
 ### `MapLayer`
-Defines a single renderable map image layer and its optional behaviors.
+Represents one image layer in the map stack.  
+This is the core building block that controls draw order, placement, animations, parallax, and optional layer-level shaders.
 Properties:
 - `id: string` unique layer ID
 - `src: string` image path/url
@@ -128,7 +133,8 @@ const baseLayer: MapLayer = {
 ```
 
 ### `PanConfig`
-Controls user panning and programmatic pan animation smoothness.
+Controls how users drag the map and how smooth camera movement feels.  
+It also affects easing used when the map moves programmatically (for example, marker focus/reset behavior).
 Properties:
 - `enabled?: boolean` enable/disable panning
 - `easingFactor?: number` pan smoothing factor
@@ -141,7 +147,8 @@ const panConfig: PanConfig = { enabled: true, easingFactor: 0.15, focusEasingFac
 ```
 
 ### `ZoomConfig`
-Controls zoom limits, intro zoom behavior, and smoothing.
+Controls zoom input behavior and camera zoom constraints.  
+Use this to define allowed zoom range, initial zoom state, intro zoom animation, and smoothing responsiveness.
 Properties:
 - `enabled?: boolean` enable/disable zoom
 - `minZoom?: number` minimum zoom level
@@ -166,7 +173,8 @@ const zoomConfig: ZoomConfig = {
 ```
 
 ### `ParallaxConfig`
-Enables and tunes depth-style camera parallax behavior.
+Enables depth perception by moving/scaling layers at different rates during pan/zoom.  
+Use `intensity` and `mode` to tune how strong and what style of parallax motion feels right for your map.
 Properties:
 - `intensity?: number` global parallax multiplier
 - `mode?: "depth" | "drift"` depth-scaling vs drift-style behavior
@@ -178,7 +186,8 @@ const parallaxConfig: ParallaxConfig = { intensity: 0.35, mode: "depth" };
 ```
 
 ### `MapMarker`
-Defines clickable points anchored to base-map pixel coordinates.
+Defines interactive points on the map using base-image pixel coordinates.  
+Markers can be used for hover labels, click navigation, and programmatic focus flows.
 Properties:
 - `x: number` X in base-image pixels
 - `y: number` Y in base-image pixels
@@ -193,7 +202,8 @@ const markers: MapMarker[] = [{ id: "a", x: 840, y: 420, label: "Olympus", color
 ```
 
 ### `SpriteEffectConfig`
-Configures sprite-sheet driven ambient effects like birds or butterflies.
+Configures animated sprite groups for lightweight ambient motion.  
+Useful for effects like birds, leaves, or insects that move independently from static map layers.
 Properties:
 - `id: string` unique effect ID
 - `src: string` sprite sheet path
@@ -218,7 +228,8 @@ const spriteEffects: SpriteEffectConfig[] = [
 ```
 
 ### `FogEffectConfig`
-Configures drifting fog overlays with optional pulse and breathing motion.
+Configures fog overlays that drift across the scene for atmosphere.  
+Optional opacity and scale animation blocks help create natural breathing and pulse behavior.
 Properties:
 - `id: string` unique fog ID
 - `src: string` fog texture path
@@ -256,7 +267,8 @@ const fogEffects: FogEffectConfig[] = [
 ```
 
 ### `ParticleEffectConfig`
-Configures twinkle, drift, or glow particle systems with optional masking.
+Configures procedural particle systems such as sparkles, embers, or magical glow points.  
+Supports region constraints, motion variation, layer attachment, and optional mask-constrained behavior.
 Properties:
 - `id: string` unique effect ID
 - `mode?: "twinkle" | "drift" | "glow"` particle behavior
@@ -302,7 +314,8 @@ const particleEffects: ParticleEffectConfig[] = [
 ```
 
 ### `ShaderEffectConfig`
-Configures standalone shader quads in map or viewport space.
+Configures standalone shader-driven quads that are not tied to a single map layer.  
+Use this for effects like heat haze, ripples, glow overlays, or custom GLSL visual treatments.
 Properties:
 - `id: string` unique effect ID
 - `fragmentShader?: string` custom fragment shader
@@ -334,7 +347,8 @@ const shaderEffects: ShaderEffectConfig[] = [
 ```
 
 ### `MaskEffectConfig`
-Maps RGB mask channels to shader and/or particle effects.
+Lets one RGB mask image drive multiple effects at once by channel.  
+This is useful when different regions should receive different effects without maintaining multiple mask files.
 Properties:
 - `id: string` unique mask-group ID
 - `src: string` RGB mask texture path
@@ -367,7 +381,8 @@ const maskEffects: MaskEffectConfig[] = [
 ```
 
 ### `LayerShaderConfig`
-Applies a custom or preset shader directly to a specific map layer.
+Applies a shader directly to one `MapLayer` texture.  
+Use this when an effect should move exactly with that layer instead of rendering as a separate overlay.
 Properties:
 - `vertexShader?: string` custom vertex shader
 - `fragmentShader?: string` custom fragment shader
@@ -397,7 +412,8 @@ const overlayLayer: MapLayer = {
 ```
 
 ### `LoadingStyleConfig`
-Overrides colors and typography used by the loading overlay UI.
+Customizes the appearance of the built-in loading overlay.  
+Use it to align loading visuals with your product theme (colors, typography, bar sizing).
 Properties:
 - `barColor?: string`
 - `backgroundColor?: string`
@@ -416,7 +432,8 @@ const loadingStyle: LoadingStyleConfig = {
 ```
 
 ### `RenderConfig`
-Tunes renderer quality/performance tradeoffs, especially for mobile.
+Controls WebGL renderer quality and power usage tradeoffs.  
+This is especially useful for mobile optimization through DPR caps and antialias configuration.
 Properties:
 - `dpr?: number | [number, number]` renderer DPR or capped DPR range
 - `antialias?: boolean` toggle MSAA
@@ -433,7 +450,8 @@ const renderConfig: RenderConfig = {
 ```
 
 ## Animation Types (`LayerAnimation`)
-Layer animation models that can be used individually or in parallel arrays.
+These are built-in animation models for map layers.  
+You can provide one animation or an array to combine multiple motions in parallel on the same layer.
 
 `LayerAnimation` can be one of:
 - `BounceAnimation`
@@ -442,7 +460,8 @@ Layer animation models that can be used individually or in parallel arrays.
 - `WobbleAnimation`
 
 ### `BounceAnimation`
-Moves a layer back and forth along a direction vector.
+Moves a layer rhythmically along a direction vector.  
+Commonly used for floating overlays and subtle vertical motion.
 Properties:
 - `type: "bounce"`
 - `direction?: { x: number; y: number }`
@@ -451,7 +470,8 @@ Properties:
 - `easing?: EasingConfig`
 
 ### `CarouselAnimation`
-Moves a layer continuously in a direction, with wrap or infinite mode.
+Moves a layer continuously at constant speed in one direction.  
+Choose `wrap` for seamless loops or `infinite` for one-way travel.
 Properties:
 - `type: "carousel"`
 - `direction?: { x: number; y: number }`
@@ -459,7 +479,8 @@ Properties:
 - `mode?: "wrap" | "infinite"`
 
 ### `FadeAnimation`
-Animates layer opacity between minimum and maximum values.
+Animates layer opacity over time between low and high bounds.  
+Useful for breathing lights, cloud softness, and intermittent visual emphasis.
 Properties:
 - `type: "fade"`
 - `minOpacity?: number`
@@ -468,7 +489,8 @@ Properties:
 - `easing?: EasingConfig`
 
 ### `WobbleAnimation`
-Oscillates a layer around its center offset.
+Sways a layer around its center using a configurable offset.  
+Useful for gentle lateral movement that feels more organic than linear drift.
 Properties:
 - `type: "wobble"`
 - `offset?: { x: number; y: number }`
@@ -490,14 +512,16 @@ const animatedLayer: MapLayer = {
 ```
 
 ## Easing
-Shared easing formats for supported animation configs.
+Defines the easing formats accepted by animations in this package.  
+Use presets for quick setup or cubic-bezier tuples for exact timing control.
 
 `EasingConfig` supports:
 - Presets: `"linear" | "ease-in" | "ease-out" | "ease-in-out"`
 - Custom cubic-bezier tuple: `[x1, y1, x2, y2]`
 
 ## Exports
-Public runtime and type exports available from `@interactive-map/core`.
+Shows what runtime components and TypeScript types are publicly available.  
+Import from here when building map configs, extending effects, or typing your app integration.
 
 ```ts
 export { InteractiveMap } from "@interactive-map/core";
