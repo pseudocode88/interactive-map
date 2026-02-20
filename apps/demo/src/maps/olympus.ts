@@ -78,7 +78,7 @@ function buildLayers(isMobile: boolean): MapLayer[] {
       {
         type: "carousel",
         direction: { x: -1, y: 0 },
-        speed: isMobile ? 26 : 40,
+        speed: isMobile ? 26 : 30,
       },
       { type: "fade", minOpacity: 0.8, maxOpacity: 1, duration: 5 },
     ],
@@ -103,7 +103,7 @@ function buildLayers(isMobile: boolean): MapLayer[] {
           direction: { x: -1, y: 0 },
           speed: 10,
         },
-        { type: "fade", minOpacity: 0.6, maxOpacity: 1, duration: 3 },
+        { type: "fade", minOpacity: 0.8, maxOpacity: 1, duration: 3 },
       ],
     },
   ];

@@ -36,16 +36,6 @@ function pingPongProgress(elapsed: number, duration: number): number {
   return cycleProgress <= 0.5 ? cycleProgress * 2 : (1 - cycleProgress) * 2;
 }
 
-function wrapCentered(value: number, range: number): number {
-  if (range <= 0) {
-    return 0;
-  }
-
-  const halfRange = range / 2;
-  const wrapped = ((value + halfRange) % range + range) % range;
-  return wrapped - halfRange;
-}
-
 export function computeBounce(
   animation: BounceAnimation,
   elapsed: number,
@@ -83,14 +73,15 @@ export function computeCarousel(
   let offsetY = direction.y * displacement;
 
   if (mode === "wrap") {
-    const wrapDistX = baseWidth + layerWidth;
-    const wrapDistY = baseHeight + layerHeight;
+    const wrapDistX = layerWidth;
+    const wrapDistY = layerHeight;
     const axisContribX =
       Math.abs(direction.x) > 0 ? wrapDistX / Math.abs(direction.x) : Infinity;
     const axisContribY =
       Math.abs(direction.y) > 0 ? wrapDistY / Math.abs(direction.y) : Infinity;
     const wrapCycleLength = Math.min(axisContribX, axisContribY);
-    const wrappedDisplacement = wrapCentered(displacement, wrapCycleLength);
+    const wrappedDisplacement =
+      ((displacement % wrapCycleLength) + wrapCycleLength) % wrapCycleLength;
 
     offsetX = direction.x * wrappedDisplacement;
     offsetY = direction.y * wrappedDisplacement;

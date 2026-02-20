@@ -250,8 +250,8 @@ export function MapLayerMesh({
   const geoHeight = textureHeight * safeAutoScale;
   const tileOffset = useMemo(
     () => ({
-      x: (carouselDirection?.x ?? 0) * geoWidth,
-      y: (carouselDirection?.y ?? 0) * geoHeight,
+      x: -(carouselDirection?.x ?? 0) * geoWidth,
+      y: -(carouselDirection?.y ?? 0) * geoHeight,
     }),
     [carouselDirection, geoHeight, geoWidth]
   );
