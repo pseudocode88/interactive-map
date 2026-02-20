@@ -2,8 +2,10 @@ import { useFrame, useLoader } from "@react-three/fiber";
 import type { RefObject } from "react";
 import { useEffect, useMemo, useRef } from "react";
 import {
+  ClampToEdgeWrapping,
   LinearFilter,
   Mesh,
+  RepeatWrapping,
   SRGBColorSpace,
   ShaderMaterial,
   TextureLoader,
@@ -125,20 +127,37 @@ export function MapLayerMesh({
     textureHeight,
     textureWidth,
   ]);
+  const carouselDirection = useMemo(() => {
+    const carouselAnimation = (animation ?? []).find(
+      (item): item is CarouselAnimation => item.type === "carousel"
+    );
+    if (!carouselAnimation) {
+      return null;
+    }
+
+    return normalizeDirection(carouselAnimation.direction ?? { x: 1, y: 0 });
+  }, [animation]);
+  const hasCarousel = carouselDirection !== null;
 
   const processedTexture = useMemo(() => {
     const safeAutoScale = Math.max(1, autoScale);
-    const uvScale = 1 / safeAutoScale;
+    const uvScale = hasCarousel ? 1 : 1 / safeAutoScale;
+    const hasVerticalCarouselMotion =
+      hasCarousel && Math.abs(carouselDirection?.y ?? 0) > 0;
 
     texture.minFilter = LinearFilter;
     texture.magFilter = LinearFilter;
     texture.colorSpace = SRGBColorSpace;
+    texture.wrapS = hasCarousel ? RepeatWrapping : ClampToEdgeWrapping;
+    texture.wrapT =
+      hasVerticalCarouselMotion ? RepeatWrapping : ClampToEdgeWrapping;
     texture.repeat.set(uvScale, uvScale);
-    texture.offset.set((1 - uvScale) / 2, (1 - uvScale) / 2);
+    const centerOffset = hasCarousel ? 0 : (1 - uvScale) / 2;
+    texture.offset.set(centerOffset, centerOffset);
     texture.needsUpdate = true;
 
     return texture;
-  }, [autoScale, texture]);
+  }, [autoScale, carouselDirection?.y, hasCarousel, texture]);
 
   const resolvedPreset = useMemo(() => {
     if (!shaderConfig?.preset) {
@@ -229,17 +248,6 @@ export function MapLayerMesh({
   const safeAutoScale = Math.max(1, autoScale);
   const geoWidth = textureWidth * safeAutoScale;
   const geoHeight = textureHeight * safeAutoScale;
-  const carouselDirection = useMemo(() => {
-    const carouselAnimation = (animation ?? []).find(
-      (item): item is CarouselAnimation => item.type === "carousel"
-    );
-    if (!carouselAnimation) {
-      return null;
-    }
-
-    return normalizeDirection(carouselAnimation.direction ?? { x: 1, y: 0 });
-  }, [animation]);
-  const hasCarousel = carouselDirection !== null;
   const tileOffset = useMemo(
     () => ({
       x: (carouselDirection?.x ?? 0) * geoWidth,
@@ -276,8 +284,8 @@ export function MapLayerMesh({
             elapsed.current,
             baseWidth,
             baseHeight,
-            textureWidth,
-            textureHeight,
+            geoWidth,
+            geoHeight,
             resolvedEasings
           )
         : { offsetX: 0, offsetY: 0, opacity: null };
