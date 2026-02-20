@@ -44,3 +44,134 @@ docs/
 
 - `pnpm dev`: Run demo app
 
+## Use In Another Project
+
+Use this package as `@interactive-map/core`.
+
+Right now, the package is marked `private` in this repository, so the practical way to consume it is as a local workspace dependency (or after publishing it from your own registry).
+
+### Option 1: Local/Workspace Dependency (current setup)
+
+If your app lives in the same monorepo:
+
+```bash
+pnpm add @interactive-map/core --filter your-app
+```
+
+Then use it in a client component:
+
+```tsx
+"use client";
+
+import { InteractiveMap } from "@interactive-map/core";
+import type { MapLayer } from "@interactive-map/core";
+
+const layers: MapLayer[] = [{ id: "base", src: "/base-map.png", zIndex: 0 }];
+
+export default function MapPage() {
+  return <InteractiveMap layers={layers} />;
+}
+```
+
+#### Next.js Copy-Paste Setup (from this repo to another Next.js repo)
+
+If you copy `packages/interactive-map` into a different Next.js repository, use this checklist:
+
+1. Copy the package folder into your new repo (for example, `packages/interactive-map`).
+2. Make sure your root `pnpm-workspace.yaml` includes `packages/*`.
+3. Add the dependency in your app:
+
+```json
+{
+  "dependencies": {
+    "@interactive-map/core": "workspace:*"
+  }
+}
+```
+
+4. Install required runtime dependencies in the app:
+
+```bash
+pnpm add three @react-three/fiber @react-three/drei
+pnpm add react react-dom
+```
+
+5. Tell Next.js to transpile the package in `next.config.ts`:
+
+```ts
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  transpilePackages: ["@interactive-map/core"],
+};
+
+export default nextConfig;
+```
+
+6. Use `InteractiveMap` from a client component (`"use client"`), then run:
+
+```bash
+pnpm install
+pnpm dev
+```
+
+### Option 2: Private Package In Another Repo (without publishing)
+
+If your app is in a different repository and this package is still private, use one of these approaches:
+
+1. `pnpm link` for active local development between two repos.
+
+In this repo:
+
+```bash
+cd packages/interactive-map
+pnpm link --global
+```
+
+In the other repo:
+
+```bash
+pnpm link --global @interactive-map/core
+pnpm add three @react-three/fiber @react-three/drei
+```
+
+2. `pnpm pack` + install tarball for a reproducible private handoff.
+
+In this repo:
+
+```bash
+cd packages/interactive-map
+pnpm pack
+```
+
+In the other repo (point to the generated `.tgz` path):
+
+```bash
+pnpm add /absolute/path/to/interactive-map-core-<version>.tgz
+pnpm add three @react-three/fiber @react-three/drei
+```
+
+3. Private Git dependency (recommended only if you split `packages/interactive-map` into its own private repo):
+
+```bash
+pnpm add git+ssh://git@github.com/<org>/interactive-map-core.git#<branch-or-tag>
+pnpm add three @react-three/fiber @react-three/drei
+```
+
+Peer dependencies required by your app:
+- `react` (18 or 19)
+- `react-dom` (18 or 19)
+
+### Option 3: After Publishing The Package
+
+If you publish `@interactive-map/core` to npm/GitHub Packages/private registry, install it in any React app with:
+
+```bash
+pnpm add @interactive-map/core three @react-three/fiber @react-three/drei
+```
+
+Peer dependencies required by your app:
+- `react` (18 or 19)
+- `react-dom` (18 or 19)
+
+For full configuration details, see `packages/interactive-map/README.md`.

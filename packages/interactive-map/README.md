@@ -2,18 +2,9 @@
 
 Reusable interactive map component for React apps using Three.js via React Three Fiber.
 
-## What It Supports
-
-- Multi-layer map rendering from PNG images
-- Pan with boundary clamping
-- Zoom with wheel and pinch gestures
-- Per-layer animations (single or parallel):
-  - `bounce`
-  - `carousel` (`wrap` or `infinite`)
-  - `fade`
-  - `wobble`
-
 ## Install
+Install the map package with its runtime rendering dependencies.  
+After install, you can import `InteractiveMap` and pass typed config objects shown below.
 
 ```bash
 pnpm add @interactive-map/core three @react-three/fiber @react-three/drei
@@ -23,160 +14,514 @@ Peer dependencies:
 - `react` 18 or 19
 - `react-dom` 18 or 19
 
-## Basic Usage
+## What It Supports
+This gives a quick capability snapshot before diving into the API reference.  
+Use it to confirm whether the component supports your required interaction and visual-effect patterns.
 
-```tsx
-import { InteractiveMap } from "@interactive-map/core";
-import type { MapLayer } from "@interactive-map/core";
-
-const layers: MapLayer[] = [
-  { id: "base", src: "/base-map.png", zIndex: 0 },
-  {
-    id: "cloud",
-    src: "/overlay.png",
-    zIndex: 1,
-    position: { x: 0, y: -10 },
-    animation: [
-      { type: "bounce", amplitude: 15, duration: 2, easing: "ease-in-out" },
-      { type: "fade", minOpacity: 0.4, maxOpacity: 1, duration: 3 },
-    ],
-  },
-];
-
-export default function Page() {
-  return (
-    <div style={{ width: "100vw", height: "100vh" }}>
-      <InteractiveMap
-        layers={layers}
-        panConfig={{ enabled: true, easingFactor: 0.15 }}
-        zoomConfig={{ enabled: true, minZoom: 1, maxZoom: 2, initialZoom: 1.4 }}
-      />
-    </div>
-  );
-}
-```
-
-## Implementation Example (Next.js)
-
-Use this pattern in `app/page.tsx` or any client component.
-
-```tsx
-"use client";
-
-import { InteractiveMap } from "@interactive-map/core";
-import type { MapLayer } from "@interactive-map/core";
-
-const layers = [
-  {
-    id: "cloud-back",
-    src: "/overlay-cloud-back.png",
-    zIndex: -1,
-    animation: [
-      {
-        type: "carousel",
-        direction: { x: 1, y: 0 },
-        speed: 40,
-        mode: "wrap",
-      },
-    ],
-  },
-  { id: "base", src: "/base-map.png", zIndex: 0 },
-  {
-    id: "cloud-front",
-    src: "/overlay.png",
-    zIndex: 1,
-    position: { x: 0, y: -10 },
-    animation: [
-      {
-        type: "bounce",
-        direction: { x: 0, y: 1 },
-        amplitude: 14,
-        duration: 2,
-        easing: "ease-in-out",
-      },
-      {
-        type: "fade",
-        minOpacity: 0.45,
-        maxOpacity: 1,
-        duration: 3,
-        easing: [0.25, 0.1, 0.25, 1],
-      },
-    ],
-  },
-] satisfies MapLayer[];
-
-export default function HomePage() {
-  return (
-    <main style={{ width: "100vw", height: "100vh", background: "#81D4E7" }}>
-      <InteractiveMap
-        layers={layers}
-        panConfig={{ enabled: true, easingFactor: 0.15 }}
-        zoomConfig={{
-          enabled: true,
-          minZoom: 1,
-          maxZoom: 2.5,
-          initialZoom: 1.3,
-          scrollSpeed: 0.001,
-          easingFactor: 0.15,
-        }}
-      />
-    </main>
-  );
-}
-```
-
-Notes:
-- Place image files inside your Next.js `public/` folder.
-- Keep the base layer at the lowest `zIndex` (it defines map bounds).
-- Combine multiple animations in `animation: []` to run them in parallel.
+- Multi-layer map rendering from image assets
+- Pan + zoom with clamped camera bounds
+- Per-layer animations (`bounce`, `carousel`, `fade`, `wobble`)
+- Optional parallax depth behavior
+- Markers, sprites, fog, particles
+- Standalone shader effects and mask-driven effects
+- Loading overlay customization and render tuning
 
 ## `InteractiveMap` Props
+This is the top-level API you pass into `<InteractiveMap />`.  
+Each prop controls either layout, camera behavior, visual effects, loading UX, or renderer performance.
 
-- `layers: MapLayer[]` (required)
-- `width?: string` (default: `"100%"`)
-- `height?: string` (default: `"100%"`)
-- `className?: string`
-- `panConfig?: PanConfig`
-- `zoomConfig?: ZoomConfig`
+### `layers: MapLayer[]` (required)
+All map image layers. Lowest `zIndex` is used as the base layer unless `baseLayerId` is provided.
 
-## Types
+### `baseLayerId?: string`
+Layer ID to use as viewport reference instead of lowest `zIndex`.
+
+### `width?: string`
+Container width. Default: `"100%"`.
+
+### `height?: string`
+Container height. Default: `"100%"`.
+
+### `className?: string`
+Optional container class.
+
+### `panConfig?: PanConfig`
+Panning behavior settings.
+
+### `zoomConfig?: ZoomConfig`
+Zoom behavior settings.
+
+### `parallaxConfig?: ParallaxConfig`
+Enables map parallax when provided.
+
+### `markers?: MapMarker[]`
+Clickable marker points.
+
+### `spriteEffects?: SpriteEffectConfig[]`
+Sprite-sheet based effects (birds, butterflies, etc).
+
+### `fogEffects?: FogEffectConfig[]`
+Fog/drift overlays.
+
+### `particleEffects?: ParticleEffectConfig[]`
+Twinkle/drift/glow particles.
+
+### `shaderEffects?: ShaderEffectConfig[]`
+Standalone shader quads.
+
+### `maskEffects?: MaskEffectConfig[]`
+Mask-channel driven shader/particle groups.
+
+### `onMarkerClick?: (markerId: string) => void`
+Marker click callback.
+
+### `loadingMessages?: string[]`
+Custom loading overlay milestone text.
+
+### `loadingStyle?: LoadingStyleConfig`
+Loading overlay style overrides.
+
+### `showLoadingScreen?: boolean`
+Controls loading overlay visibility. Default: `true`.
+
+### `renderConfig?: RenderConfig`
+Renderer performance tuning options.
+
+### `blockOnParticleInit?: boolean`
+When `false`, particle initialization continues after first reveal. Default: `true`.
+
+### `resetZoomTrigger?: number`
+Increment/change this value to reset pan/zoom to initial state.
+
+Small snippet:
+
+```tsx
+<InteractiveMap
+  layers={layers}
+  panConfig={{ enabled: true }}
+  zoomConfig={{ minZoom: 1, maxZoom: 2.2 }}
+  parallaxConfig={{ intensity: 0.3 }}
+  renderConfig={{ dpr: [1, 1.5], antialias: false }}
+/>
+```
+
+## Config Categories
+Each section below explains one config type, what it controls, and the available properties.  
+Read these in order when building a map from base layers first, then optional effects.
 
 ### `MapLayer`
+Represents one image layer in the map stack.  
+This is the core building block that controls draw order, placement, animations, parallax, and optional layer-level shaders.
+Properties:
+- `id: string` unique layer ID
+- `src: string` image path/url
+- `zIndex: number` depth order
+- `position?: { x?: number; y?: number }` pixel offset
+- `animation?: LayerAnimation | LayerAnimation[]` one or many parallel animations
+- `parallaxFactor?: number` per-layer parallax override
+- `shaderConfig?: LayerShaderConfig` custom layer shader behavior
 
-- `id: string`
-- `src: string`
-- `zIndex: number`
-- `position?: { x?: number; y?: number }`
-- `animation?: LayerAnimation | LayerAnimation[]`
+Small snippet:
 
-The base map is derived from the lowest `zIndex` layer.
+```ts
+const baseLayer: MapLayer = {
+  id: "base",
+  src: "/base-map.webp",
+  zIndex: 0,
+  position: { x: 0, y: 0 },
+};
+```
 
 ### `PanConfig`
+Controls how users drag the map and how smooth camera movement feels.  
+It also affects easing used when the map moves programmatically (for example, marker focus/reset behavior).
+Properties:
+- `enabled?: boolean` enable/disable panning
+- `easingFactor?: number` pan smoothing factor
+- `focusEasingFactor?: number` smoothing for programmatic focus/reset moves
 
-- `enabled?: boolean` (default: `true`)
-- `easingFactor?: number` (default: `0.15`)
+Small snippet:
+
+```ts
+const panConfig: PanConfig = { enabled: true, easingFactor: 0.15, focusEasingFactor: 0.05 };
+```
 
 ### `ZoomConfig`
+Controls zoom input behavior and camera zoom constraints.  
+Use this to define allowed zoom range, initial zoom state, intro zoom animation, and smoothing responsiveness.
+Properties:
+- `enabled?: boolean` enable/disable zoom
+- `minZoom?: number` minimum zoom level
+- `maxZoom?: number` maximum zoom level
+- `initialZoom?: number` starting zoom
+- `animateIntroZoom?: boolean` start at `minZoom` then animate to `initialZoom`
+- `introZoomDelayMs?: number` delay before intro zoom starts
+- `scrollSpeed?: number` wheel/pinch sensitivity
+- `easingFactor?: number` zoom smoothing factor
+- `focusEasingFactor?: number` smoothing for programmatic focus/reset zoom
 
-- `enabled?: boolean` (default: `true`)
-- `minZoom?: number` (default: `1`)
-- `maxZoom?: number` (default: `3`)
-- `initialZoom?: number` (default: `1`, clamped to min/max)
-- `scrollSpeed?: number` (default: `0.001`)
-- `easingFactor?: number` (default: `0.15`)
+Small snippet:
 
-### Animation Types
+```ts
+const zoomConfig: ZoomConfig = {
+  enabled: true,
+  minZoom: 1,
+  maxZoom: 2.5,
+  initialZoom: 1.3,
+  animateIntroZoom: true,
+};
+```
 
+### `ParallaxConfig`
+Enables depth perception by moving/scaling layers at different rates during pan/zoom.  
+Use `intensity` and `mode` to tune how strong and what style of parallax motion feels right for your map.
+Properties:
+- `intensity?: number` global parallax multiplier
+- `mode?: "depth" | "drift"` depth-scaling vs drift-style behavior
+
+Small snippet:
+
+```ts
+const parallaxConfig: ParallaxConfig = { intensity: 0.35, mode: "depth" };
+```
+
+### `MapMarker`
+Defines interactive points on the map using base-image pixel coordinates.  
+Markers can be used for hover labels, click navigation, and programmatic focus flows.
+Properties:
+- `x: number` X in base-image pixels
+- `y: number` Y in base-image pixels
+- `id: string` marker ID
+- `label: string` tooltip text
+- `color?: string` marker color
+
+Small snippet:
+
+```ts
+const markers: MapMarker[] = [{ id: "a", x: 840, y: 420, label: "Olympus", color: "#ff7a59" }];
+```
+
+### `SpriteEffectConfig`
+Configures animated sprite groups for lightweight ambient motion.  
+Useful for effects like birds, leaves, or insects that move independently from static map layers.
+Properties:
+- `id: string` unique effect ID
+- `src: string` sprite sheet path
+- `maxCount?: number` max simultaneous sprites
+- `speed?: number` base movement speed
+- `speedVariance?: number` random speed variance factor
+- `direction?: { x: number; y: number }` primary movement direction
+- `directionVariance?: number` random direction spread (degrees)
+- `oscillation?: { amplitude?: number; frequency?: number }` flight wobble
+- `fps?: number` sprite animation FPS
+- `zIndex?: number` draw order
+- `parallaxFactor?: number` parallax override
+- `scale?: number` sprite scale multiplier
+- `opacity?: number` opacity multiplier
+
+Small snippet:
+
+```ts
+const spriteEffects: SpriteEffectConfig[] = [
+  { id: "birds", src: "/bird.png", maxCount: 6, speed: 70, direction: { x: 1, y: 0 }, zIndex: 10 },
+];
+```
+
+### `FogEffectConfig`
+Configures fog overlays that drift across the scene for atmosphere.  
+Optional opacity and scale animation blocks help create natural breathing and pulse behavior.
+Properties:
+- `id: string` unique fog ID
+- `src: string` fog texture path
+- `position?: { x?: number; y?: number }` map offset
+- `direction?: { x: number; y: number }` drift direction
+- `speed?: number` drift speed
+- `opacity?: number` base opacity
+- `opacityPulse?: FogOpacityPulse` fade pulse config
+- `scaleBreathing?: FogScaleBreathing` size breathing config
+- `zIndex?: number` draw order
+- `parallaxFactor?: number` parallax override
+
+`FogOpacityPulse` properties:
+- `minOpacity?: number`
+- `maxOpacity?: number`
+- `duration?: number`
+- `easing?: EasingConfig`
+
+`FogScaleBreathing` properties:
+- `amplitude?: number`
+- `duration?: number`
+- `easing?: EasingConfig`
+
+Small snippet:
+
+```ts
+const fogEffects: FogEffectConfig[] = [
+  {
+    id: "mist",
+    src: "/fog.webp",
+    speed: 18,
+    opacityPulse: { minOpacity: 0.25, maxOpacity: 0.7, duration: 4 },
+  },
+];
+```
+
+### `ParticleEffectConfig`
+Configures procedural particle systems such as sparkles, embers, or magical glow points.  
+Supports region constraints, motion variation, layer attachment, and optional mask-constrained behavior.
+Properties:
+- `id: string` unique effect ID
+- `mode?: "twinkle" | "drift" | "glow"` particle behavior
+- `maxCount?: number` max particles
+- `color?: string` particle color
+- `size?: number` base size
+- `sizeVariance?: number` random size variance
+- `src?: string` optional particle texture
+- `region?: { x: number; y: number; width: number; height: number }` spawn region
+- `regionMode?: "map" | "container"` region coordinate space
+- `layerId?: string` attach to a specific layer
+- `twinkleDuration?: number` twinkle cycle duration
+- `twinkleDurationVariance?: number` twinkle duration variance
+- `driftDirection?: { x: number; y: number }` drift direction
+- `driftDirectionVariance?: number` drift angle variance
+- `driftSpeed?: number` drift speed
+- `driftSpeedVariance?: number` drift speed variance
+- `driftDistance?: number` drift distance before respawn
+- `glowStyle?: "soft" | "bloom" | "pulse" | "all"` glow appearance
+- `glowMovement?: "stationary" | "drift"` glow motion
+- `glowDuration?: number` glow cycle duration
+- `glowDurationVariance?: number` glow duration variance
+- `zIndex?: number` draw order
+- `parallaxFactor?: number` parallax override
+- `opacity?: number` base opacity
+- `maskSrc?: string` optional mask texture
+- `maskChannel?: MaskChannel` mask channel (`"r" | "g" | "b"`)
+- `maskBehavior?: "spawn" | "constrain" | "both"` mask constraint behavior
+- `maskThreshold?: number` mask inclusion threshold
+
+Small snippet:
+
+```ts
+const particleEffects: ParticleEffectConfig[] = [
+  {
+    id: "sparkles",
+    mode: "glow",
+    maxCount: 40,
+    region: { x: 200, y: 120, width: 800, height: 500 },
+    glowStyle: "all",
+  },
+];
+```
+
+### `ShaderEffectConfig`
+Configures standalone shader-driven quads that are not tied to a single map layer.  
+Use this for effects like heat haze, ripples, glow overlays, or custom GLSL visual treatments.
+Properties:
+- `id: string` unique effect ID
+- `fragmentShader?: string` custom fragment shader
+- `vertexShader?: string` custom vertex shader
+- `src?: string` optional texture injected as `uTexture`
+- `space?: "map" | "viewport"` effect space
+- `region?: { x: number; y: number; width: number; height: number }` quad bounds
+- `uniforms?: Record<string, { value: unknown }>` custom uniforms
+- `transparent?: boolean` material transparency
+- `depthWrite?: boolean` depth-buffer writing
+- `zIndex?: number` draw order
+- `parallaxFactor?: number` parallax override
+- `preset?: ShaderPresetName` built-in preset
+- `presetParams?: Record<string, unknown>` preset params
+- `maskSrc?: string` optional mask texture
+- `maskChannel?: MaskChannel` mask channel
+
+Small snippet:
+
+```ts
+const shaderEffects: ShaderEffectConfig[] = [
+  {
+    id: "heat",
+    preset: "heatHaze",
+    presetParams: { intensity: 0.5 },
+    region: { x: 300, y: 200, width: 500, height: 280 },
+  },
+];
+```
+
+### `MaskEffectConfig`
+Lets one RGB mask image drive multiple effects at once by channel.  
+This is useful when different regions should receive different effects without maintaining multiple mask files.
+Properties:
+- `id: string` unique mask-group ID
+- `src: string` RGB mask texture path
+- `pinnedTo?: string` layer ID to pin effects to
+- `red?: MaskChannelEffect` effect for red channel
+- `green?: MaskChannelEffect` effect for green channel
+- `blue?: MaskChannelEffect` effect for blue channel
+- `space?: "map" | "viewport"` shader effect space
+- `zIndex?: number` base draw order for generated effects
+- `parallaxFactor?: number` parallax override for group
+- `transparent?: boolean` shader material transparency
+- `maskBehavior?: "spawn" | "constrain" | "both"` particle mask behavior
+- `maskThreshold?: number` mask inclusion threshold
+
+`MaskChannelEffect` variants:
+- `MaskChannelShaderEffect`: `{ type?: "shader", preset?, presetParams?, fragmentShader?, vertexShader?, uniforms?, src? }`
+- `MaskChannelParticleEffect`: `{ type: "particles", config: Omit<ParticleEffectConfig, "id" | "maskSrc" | "maskChannel" | "maskBehavior" | "maskThreshold"> }`
+
+Small snippet:
+
+```ts
+const maskEffects: MaskEffectConfig[] = [
+  {
+    id: "terrain-mask",
+    src: "/maps/demo-mask.png",
+    red: { type: "shader", preset: "glow" },
+    green: { type: "particles", config: { mode: "twinkle", maxCount: 30 } },
+  },
+];
+```
+
+### `LayerShaderConfig`
+Applies a shader directly to one `MapLayer` texture.  
+Use this when an effect should move exactly with that layer instead of rendering as a separate overlay.
+Properties:
+- `vertexShader?: string` custom vertex shader
+- `fragmentShader?: string` custom fragment shader
+- `uniforms?: Record<string, { value: unknown }>` custom uniforms
+- `transparent?: boolean` material transparency
+- `depthWrite?: boolean` depth-buffer writing
+- `preset?: ShaderPresetName` built-in preset
+- `presetParams?: Record<string, unknown>` preset params
+- `maskSrc?: string` mask texture path
+- `maskChannel?: MaskChannel` mask channel
+
+Auto uniforms available to layer shaders:
+- `uTime`
+- `uResolution`
+- `uTexture`
+- `uViewport`
+
+Small snippet:
+
+```ts
+const overlayLayer: MapLayer = {
+  id: "overlay",
+  src: "/overlay.webp",
+  zIndex: 1,
+  shaderConfig: { preset: "chromaticAberration", presetParams: { amount: 0.005 } },
+};
+```
+
+### `LoadingStyleConfig`
+Customizes the appearance of the built-in loading overlay.  
+Use it to align loading visuals with your product theme (colors, typography, bar sizing).
+Properties:
+- `barColor?: string`
+- `backgroundColor?: string`
+- `textColor?: string`
+- `barHeight?: number`
+- `font?: string`
+
+Small snippet:
+
+```ts
+const loadingStyle: LoadingStyleConfig = {
+  barColor: "#66e0ff",
+  backgroundColor: "rgba(0,0,0,0.6)",
+  textColor: "#ffffff",
+};
+```
+
+### `RenderConfig`
+Controls WebGL renderer quality and power usage tradeoffs.  
+This is especially useful for mobile optimization through DPR caps and antialias configuration.
+Properties:
+- `dpr?: number | [number, number]` renderer DPR or capped DPR range
+- `antialias?: boolean` toggle MSAA
+- `powerPreference?: "default" | "high-performance" | "low-power"`
+
+Small snippet:
+
+```ts
+const renderConfig: RenderConfig = {
+  dpr: [1, 1.5],
+  antialias: false,
+  powerPreference: "high-performance",
+};
+```
+
+## Animation Types (`LayerAnimation`)
+These are built-in animation models for map layers.  
+You can provide one animation or an array to combine multiple motions in parallel on the same layer.
+
+`LayerAnimation` can be one of:
 - `BounceAnimation`
 - `CarouselAnimation`
 - `FadeAnimation`
 - `WobbleAnimation`
 
-Easing supports:
+### `BounceAnimation`
+Moves a layer rhythmically along a direction vector.  
+Commonly used for floating overlays and subtle vertical motion.
+Properties:
+- `type: "bounce"`
+- `direction?: { x: number; y: number }`
+- `amplitude?: number`
+- `duration?: number`
+- `easing?: EasingConfig`
+
+### `CarouselAnimation`
+Moves a layer continuously at constant speed in one direction.  
+Choose `wrap` for seamless loops or `infinite` for one-way travel.
+Properties:
+- `type: "carousel"`
+- `direction?: { x: number; y: number }`
+- `speed?: number`
+- `mode?: "wrap" | "infinite"`
+
+### `FadeAnimation`
+Animates layer opacity over time between low and high bounds.  
+Useful for breathing lights, cloud softness, and intermittent visual emphasis.
+Properties:
+- `type: "fade"`
+- `minOpacity?: number`
+- `maxOpacity?: number`
+- `duration?: number`
+- `easing?: EasingConfig`
+
+### `WobbleAnimation`
+Sways a layer around its center using a configurable offset.  
+Useful for gentle lateral movement that feels more organic than linear drift.
+Properties:
+- `type: "wobble"`
+- `offset?: { x: number; y: number }`
+- `duration?: number`
+- `easing?: EasingConfig`
+
+Small snippet:
+
+```ts
+const animatedLayer: MapLayer = {
+  id: "cloud",
+  src: "/cloud-slide-front.webp",
+  zIndex: 2,
+  animation: [
+    { type: "carousel", direction: { x: 1, y: 0 }, speed: 35, mode: "wrap" },
+    { type: "fade", minOpacity: 0.5, maxOpacity: 1, duration: 3 },
+  ],
+};
+```
+
+## Easing
+Defines the easing formats accepted by animations in this package.  
+Use presets for quick setup or cubic-bezier tuples for exact timing control.
+
+`EasingConfig` supports:
 - Presets: `"linear" | "ease-in" | "ease-out" | "ease-in-out"`
 - Custom cubic-bezier tuple: `[x1, y1, x2, y2]`
 
 ## Exports
+Shows what runtime components and TypeScript types are publicly available.  
+Import from here when building map configs, extending effects, or typing your app integration.
 
 ```ts
 export { InteractiveMap } from "@interactive-map/core";
@@ -186,10 +531,27 @@ export type {
   EasingConfig,
   EasingPreset,
   FadeAnimation,
+  FogEffectConfig,
+  FogOpacityPulse,
+  FogScaleBreathing,
   InteractiveMapProps,
   LayerAnimation,
+  LayerShaderConfig,
+  LoadingStyleConfig,
+  MaskChannel,
+  MaskChannelEffect,
+  MaskChannelParticleEffect,
+  MaskChannelShaderEffect,
+  MaskEffectConfig,
   MapLayer,
+  MapMarker,
+  ParticleEffectConfig,
+  ParallaxConfig,
   PanConfig,
+  RenderConfig,
+  ShaderEffectConfig,
+  ShaderPresetName,
+  SpriteEffectConfig,
   WobbleAnimation,
   ZoomConfig,
 } from "@interactive-map/core";
