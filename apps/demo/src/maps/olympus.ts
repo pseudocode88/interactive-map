@@ -52,6 +52,13 @@ function buildMarkers(isMobile: boolean): MapMarker[] {
 }
 
 function buildLayers(isMobile: boolean): MapLayer[] {
+
+  const cloudBackStatic = {
+      id: "cloud-back",
+      src: "/overlay-cloud-back.webp",
+      zIndex: -1,
+    };
+
   const baseLayer: MapLayer = {
     id: "base",
     src: getBaseSource(isMobile),
@@ -78,15 +85,11 @@ function buildLayers(isMobile: boolean): MapLayer[] {
   };
 
   if (isMobile) {
-    return [baseLayer, cloudFrontLayer, cloudSlideLayer];
+    return [cloudBackStatic, baseLayer, cloudFrontLayer, cloudSlideLayer];
   }
 
   return [
-    {
-      id: "cloud-back",
-      src: "/overlay-cloud-back.webp",
-      zIndex: -1,
-    },
+    cloudBackStatic,
     baseLayer,
     cloudFrontLayer,
     cloudSlideLayer,
