@@ -73,6 +73,48 @@ export default function MapPage() {
 }
 ```
 
+#### Next.js Copy-Paste Setup (from this repo to another Next.js repo)
+
+If you copy `packages/interactive-map` into a different Next.js repository, use this checklist:
+
+1. Copy the package folder into your new repo (for example, `packages/interactive-map`).
+2. Make sure your root `pnpm-workspace.yaml` includes `packages/*`.
+3. Add the dependency in your app:
+
+```json
+{
+  "dependencies": {
+    "@interactive-map/core": "workspace:*"
+  }
+}
+```
+
+4. Install required runtime dependencies in the app:
+
+```bash
+pnpm add three @react-three/fiber @react-three/drei
+pnpm add react react-dom
+```
+
+5. Tell Next.js to transpile the package in `next.config.ts`:
+
+```ts
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  transpilePackages: ["@interactive-map/core"],
+};
+
+export default nextConfig;
+```
+
+6. Use `InteractiveMap` from a client component (`"use client"`), then run:
+
+```bash
+pnpm install
+pnpm dev
+```
+
 ### Option 2: Private Package In Another Repo (without publishing)
 
 If your app is in a different repository and this package is still private, use one of these approaches:
