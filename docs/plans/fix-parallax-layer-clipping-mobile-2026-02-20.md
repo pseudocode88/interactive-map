@@ -32,12 +32,19 @@ Carousel layers (`cloud-slide-front`, `cloud-slide-front-2`) show a visible vert
 
 **File:** `packages/interactive-map/src/utils/parallax.ts` — `computeAutoScaleFactor`
 
-Replace the coverage calculation (lines 51–61) with:
+Replace the coverage calculation (lines 46–61) with:
 
-1. Compute the actual render scale: `renderScale = depthScale / extremeZoom` for depth mode, `1` otherwise.
-2. Compute required rendered half-extents: `|pf| * maxPanRange + visibleHalfWidth` per axis.
-3. Convert to required geometry width: `(2 * requiredHalf) / renderScale`.
-4. Return `max(1, requiredGeoWidth / layerWidth, requiredGeoHeight / layerHeight)`.
+1. Extract the per-zoom-level requirement into a helper that, given a zoom `Z`, returns the required autoScale:
+   - `visHalfW = baseFrustumHalfWidth / Z`, `visHalfH = baseFrustumHalfHeight / Z`
+   - `maxPanRangeX = max(0, baseWidth/2 - visHalfW)`, same for Y
+   - `renderScale = (depth mode) ? max(0.001, (1 + (Z-1)*pf)) / Z : 1`
+   - `requiredHalfW = |pf| * maxPanRangeX + visHalfW`, same for Y
+   - `requiredGeoW = 2 * requiredHalfW / renderScale`, same for H
+   - return `max(1, requiredGeoW / layerWidth, requiredGeoH / layerHeight)`
+2. Evaluate the helper at **both** `minZoom` and `maxZoom`.
+3. Return the **larger** of the two results.
+
+> The worst-case zoom varies: at low zoom the render scale is small (less depth magnification) but pan range is large; at high zoom the render scale helps but pan range is even larger. Both must be checked.
 
 # Acceptance Criteria
 - No visible seam on carousel layers at any zoom level on mobile portrait
@@ -49,3 +56,4 @@ Replace the coverage calculation (lines 51–61) with:
 - 2026-02-20: Created plan targeting computeAutoScaleFactor min/max zoom (initial theory)
 - 2026-02-20: Updated plan — root cause is UV crop + carousel tiling mismatch, not frustum coverage. Revised fix to skip UV crop for carousel layers and use RepeatWrapping
 - 2026-02-20: Added Fix 2 — `computeAutoScaleFactor` formula uses wrong pan displacement (`|pf-1|` vs `|pf|`) and wrong depth render scale (`layerZoom` vs `layerZoom/baseZoom`), causing non-carousel depth layers to clip on mobile
+- 2026-02-20: Updated Fix 2 — evaluating only at maxZoom is insufficient; worst case can be at minZoom where depth magnification is minimal. Now evaluate at both minZoom and maxZoom, take the max
