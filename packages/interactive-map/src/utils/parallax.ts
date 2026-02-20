@@ -48,15 +48,14 @@ export function computeAutoScaleFactor(
   const visibleHalfHeight = baseFrustumHalfHeight / extremeZoom;
   const maxPanRangeX = Math.max(0, baseWidth / 2 - visibleHalfWidth);
   const maxPanRangeY = Math.max(0, baseHeight / 2 - visibleHalfHeight);
-  const panOffsetX = maxPanRangeX * Math.abs(parallaxFactor - 1);
-  const panOffsetY = maxPanRangeY * Math.abs(parallaxFactor - 1);
-
   const depthScale =
     mode === "depth" ? Math.max(0.001, 1 + (extremeZoom - 1) * parallaxFactor) : 1;
-  const visibleWidthForLayer = (visibleHalfWidth * 2) / depthScale;
-  const visibleHeightForLayer = (visibleHalfHeight * 2) / depthScale;
-  const requiredWidth = visibleWidthForLayer + panOffsetX * 2;
-  const requiredHeight = visibleHeightForLayer + panOffsetY * 2;
+  const renderScale =
+    mode === "depth" ? Math.max(0.001, depthScale / extremeZoom) : 1;
+  const requiredHalfWidth = Math.abs(parallaxFactor) * maxPanRangeX + visibleHalfWidth;
+  const requiredHalfHeight = Math.abs(parallaxFactor) * maxPanRangeY + visibleHalfHeight;
+  const requiredGeoWidth = (requiredHalfWidth * 2) / renderScale;
+  const requiredGeoHeight = (requiredHalfHeight * 2) / renderScale;
 
-  return Math.max(1, requiredWidth / layerWidth, requiredHeight / layerHeight);
+  return Math.max(1, requiredGeoWidth / layerWidth, requiredGeoHeight / layerHeight);
 }
