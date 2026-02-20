@@ -44,3 +44,45 @@ docs/
 
 - `pnpm dev`: Run demo app
 
+## Use In Another Project
+
+Use this package as `@interactive-map/core`.
+
+Right now, the package is marked `private` in this repository, so the practical way to consume it is as a local workspace dependency (or after publishing it from your own registry).
+
+### Option 1: Local/Workspace Dependency (current setup)
+
+If your app lives in the same monorepo:
+
+```bash
+pnpm add @interactive-map/core --filter your-app
+```
+
+Then use it in a client component:
+
+```tsx
+"use client";
+
+import { InteractiveMap } from "@interactive-map/core";
+import type { MapLayer } from "@interactive-map/core";
+
+const layers: MapLayer[] = [{ id: "base", src: "/base-map.png", zIndex: 0 }];
+
+export default function MapPage() {
+  return <InteractiveMap layers={layers} />;
+}
+```
+
+### Option 2: After Publishing The Package
+
+If you publish `@interactive-map/core` to npm/GitHub Packages/private registry, install it in any React app with:
+
+```bash
+pnpm add @interactive-map/core three @react-three/fiber @react-three/drei
+```
+
+Peer dependencies required by your app:
+- `react` (18 or 19)
+- `react-dom` (18 or 19)
+
+For full configuration details, see `packages/interactive-map/README.md`.
