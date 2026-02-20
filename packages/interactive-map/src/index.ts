@@ -51,6 +51,7 @@ export type {
   PinnedShaderEffectConfig,
   ParallaxConfig,
   PanConfig,
+  RenderConfig,
   ShaderEffectConfig,
   ShaderPresetName,
   SpriteEffectConfig,

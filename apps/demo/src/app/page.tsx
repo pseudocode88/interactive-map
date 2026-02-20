@@ -1,65 +1,31 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { InteractiveMap, type MapMarker } from "@interactive-map/core";
+import { useEffect, useMemo, useState } from "react";
+import {
+  InteractiveMap,
+  type MapLayer,
+  type MapMarker,
+  type MaskEffectConfig,
+  type ParticleEffectConfig,
+  type ShaderEffectConfig,
+  type SpriteEffectConfig,
+} from "@interactive-map/core";
 
-const layers = [
-  {
-    id: "cloud-back",
-    src: "/overlay-cloud-back.png",
-    zIndex: -1,
-    animation: [
-      // {
-      //   type: "wobble" as const,
-      //   offset: { x: 0, y: 1 },
-      //   duration: 10,
-      // },
-    ],
-  },
-  { id: "base", src: "/base-map.png", zIndex: 0 },
-  {
-    id: "cloud-front",
-    src: "/overlay.png",
-    zIndex: 1,
-    // position: { x: 0, y: 0 },
-    animation: [
-      // {
-      //   type: "wobble" as const,
-      //   offset: { x: 0, y: 0 },
-      //   duration: 10,
-      // },
-      { type: "fade" as const, minOpacity: 0.4, maxOpacity: 0.6, duration: 6 },
-    ],
-  },
-  {
-    id: "cloud-slide-front",
-    src: "/cloud-slide-front.png",
-    zIndex: 4,
-    animation: [
-      {
-        type: "carousel" as const,
-        direction: { x: -1, y: 0 },
-        speed: 40,
-        easing: "ease-in-out" as const,
-      },
-      { type: "fade" as const, minOpacity: 0.8, maxOpacity: 1, duration: 5 }
-    ],
-  },
-  {
-    id: "cloud-slide-front-2",
-    src: "/cloud-slide-front-2.png",
-    zIndex: 5,
-    animation: [
-      {
-        type: "carousel" as const,
-        direction: { x: -1, y: 0 },
-        speed: 10,
-        easing: "ease-in-out" as const,
-      },
-      { type: "fade" as const, minOpacity: 0.6, maxOpacity: 1, duration: 3 }
-    ],
+const MOBILE_MEDIA_QUERY = "(max-width: 900px), (pointer: coarse)";
+
+const VIGNETTE_FRAGMENT_SHADER = `
+  uniform float uTime;
+  uniform vec2 uResolution;
+  varying vec2 vUv;
+
+  void main() {
+    vec2 center = vUv - 0.5;
+    float dist = length(center);
+    float pulse = 0.85 + 0.15 * sin(uTime * 0.5);
+    float vignette = smoothstep(0.5 * pulse, 0.9, dist);
+    gl_FragColor = vec4(0.0, 0.0, 0.0, vignette * 0.4);
   }
-];
+`;
 
 const markers: MapMarker[] = [
   { id: "castle", x: 900, y: 1280, label: "Castle", color: "#FFC857" },
@@ -72,10 +38,257 @@ function buildMarkerMap(items: MapMarker[]) {
   return new Map(items.map((marker) => [marker.id, marker]));
 }
 
+function getBaseSource(isMobile: boolean): string {
+  return isMobile ? "/base-map-mobile.webp" : "/base-map.webp";
+}
+
+function getMaskSource(isMobile: boolean): string {
+  return isMobile ? "/maps/demo-mask-mobile.png" : "/maps/demo-mask.png";
+}
+
+function buildLayers(isMobile: boolean): MapLayer[] {
+  const baseLayer: MapLayer = {
+    id: "base",
+    src: getBaseSource(isMobile),
+    zIndex: 0,
+  };
+  const cloudFrontLayer: MapLayer = {
+    id: "cloud-front",
+    src: isMobile ? "/overlay-mobile.webp" : "/overlay.webp",
+    zIndex: 1,
+    animation: [{ type: "fade", minOpacity: 0.4, maxOpacity: 0.6, duration: 6 }],
+  };
+  const cloudSlideLayer: MapLayer = {
+    id: "cloud-slide-front",
+    src: isMobile ? "/cloud-slide-front-mobile.webp" : "/cloud-slide-front.webp",
+    zIndex: 4,
+    animation: [
+      {
+        type: "carousel",
+        direction: { x: -1, y: 0 },
+        speed: isMobile ? 26 : 40,
+      },
+      { type: "fade", minOpacity: 0.8, maxOpacity: 1, duration: 5 },
+    ],
+  };
+
+  if (isMobile) {
+    return [baseLayer, cloudFrontLayer, cloudSlideLayer];
+  }
+
+  return [
+    {
+      id: "cloud-back",
+      src: "/overlay-cloud-back.webp",
+      zIndex: -1,
+    },
+    baseLayer,
+    cloudFrontLayer,
+    cloudSlideLayer,
+    {
+      id: "cloud-slide-front-2",
+      src: "/cloud-slide-front-2.webp",
+      zIndex: 5,
+      animation: [
+        {
+          type: "carousel",
+          direction: { x: -1, y: 0 },
+          speed: 10,
+        },
+        { type: "fade", minOpacity: 0.6, maxOpacity: 1, duration: 3 },
+      ],
+    },
+  ];
+}
+
+function buildSpriteEffects(isMobile: boolean, effectsEnabled: boolean): SpriteEffectConfig[] {
+  if (!effectsEnabled) {
+    return [];
+  }
+
+  return [
+    {
+      id: "birds",
+      src: "/bird.png",
+      maxCount: isMobile ? 2 : 4,
+      speed: isMobile ? 80 : 100,
+      speedVariance: 0.3,
+      direction: { x: 1, y: -0.1 },
+      directionVariance: 20,
+      oscillation: { amplitude: isMobile ? 8 : 12, frequency: 0.6 },
+      fps: 8,
+      zIndex: 8,
+      scale: isMobile ? 0.9 : 1,
+    },
+  ];
+}
+
+function buildParticleEffects(
+  isMobile: boolean,
+  effectsEnabled: boolean
+): ParticleEffectConfig[] {
+  if (!effectsEnabled) {
+    return [];
+  }
+
+  return [
+    {
+      id: "embers",
+      mode: "drift",
+      maxCount: isMobile ? 16 : 40,
+      color: "#fff",
+      size: isMobile ? 5 : 7,
+      sizeVariance: 0.4,
+      driftDirection: { x: 0.1, y: 1 },
+      driftDirectionVariance: 20,
+      driftSpeed: isMobile ? 18 : 25,
+      driftSpeedVariance: 0.3,
+      driftDistance: isMobile ? 90 : 120,
+      regionMode: "container",
+      zIndex: 11,
+      opacity: 0.8,
+    },
+  ];
+}
+
+function buildMaskEffects(isMobile: boolean, effectsEnabled: boolean): MaskEffectConfig[] {
+  if (!effectsEnabled) {
+    return [];
+  }
+
+  const maskSrc = getMaskSource(isMobile);
+
+  return [
+    {
+      id: "terrain-effects",
+      src: maskSrc,
+      pinnedTo: "base",
+      red: {
+        type: "particles",
+        config: {
+          mode: "twinkle",
+          maxCount: isMobile ? 60 : 200,
+          color: "#d3ebfe",
+          size: isMobile ? 4 : 5,
+          twinkleDuration: 2,
+          twinkleDurationVariance: 0.8,
+        },
+      },
+      blue: {
+        type: "particles",
+        config: {
+          mode: "drift",
+          maxCount: isMobile ? 24 : 80,
+          color: "#FFD700",
+          size: 3,
+          sizeVariance: 0.4,
+          driftDirection: { x: 0.1, y: 1 },
+          driftDirectionVariance: 20,
+          driftSpeed: isMobile ? 18 : 25,
+          driftSpeedVariance: 0.3,
+          driftDistance: isMobile ? 80 : 120,
+        },
+      },
+      green: isMobile
+        ? undefined
+        : {
+            type: "particles",
+            config: {
+              mode: "glow",
+              glowStyle: "pulse",
+              glowMovement: "stationary",
+              maxCount: 100,
+              color: "#83ff72",
+              size: 10,
+              sizeVariance: 0.3,
+              glowDuration: 3,
+              glowDurationVariance: 0.5,
+              regionMode: "container",
+              zIndex: 11,
+              opacity: 0.8,
+            },
+          },
+      zIndex: 1.5,
+      space: "map",
+      maskBehavior: "both",
+    },
+  ];
+}
+
+function buildShaderEffects(isMobile: boolean, effectsEnabled: boolean): ShaderEffectConfig[] {
+  if (!effectsEnabled || isMobile) {
+    return [];
+  }
+
+  return [
+    {
+      id: "vignette",
+      space: "viewport",
+      fragmentShader: VIGNETTE_FRAGMENT_SHADER,
+      zIndex: 10,
+    },
+  ];
+}
+
+function useIsMobileViewport(): boolean {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia(MOBILE_MEDIA_QUERY);
+    const updateMatch = () => setIsMobile(mediaQuery.matches);
+
+    updateMatch();
+    mediaQuery.addEventListener("change", updateMatch);
+    return () => mediaQuery.removeEventListener("change", updateMatch);
+  }, []);
+
+  return isMobile;
+}
+
 export default function Home() {
+  const isMobile = useIsMobileViewport();
   const markerMap = useMemo(() => buildMarkerMap(markers), []);
   const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null);
   const [resetZoomTrigger, setResetZoomTrigger] = useState(0);
+  const [effectsEnabled, setEffectsEnabled] = useState(false);
+
+  useEffect(() => {
+    if (!isMobile) {
+      setEffectsEnabled(true);
+      return;
+    }
+
+    setEffectsEnabled(false);
+    const timeoutId = window.setTimeout(() => {
+      setEffectsEnabled(true);
+    }, 1200);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [isMobile]);
+
+  const layers = useMemo(() => buildLayers(isMobile), [isMobile]);
+  const spriteEffects = useMemo(
+    () => buildSpriteEffects(isMobile, effectsEnabled),
+    [effectsEnabled, isMobile]
+  );
+  const particleEffects = useMemo(
+    () => buildParticleEffects(isMobile, effectsEnabled),
+    [effectsEnabled, isMobile]
+  );
+  const shaderEffects = useMemo(
+    () => buildShaderEffects(isMobile, effectsEnabled),
+    [effectsEnabled, isMobile]
+  );
+  const maskEffects = useMemo(
+    () => buildMaskEffects(isMobile, effectsEnabled),
+    [effectsEnabled, isMobile]
+  );
 
   const selectedLabel = selectedMarkerId
     ? markerMap.get(selectedMarkerId)?.label ?? selectedMarkerId
@@ -98,224 +311,18 @@ export default function Home() {
           backgroundColor: "rgba(10, 8, 5, 0.9)",
           textColor: "#d4c5a0",
         }}
-        spriteEffects={[
-          {
-            id: "birds",
-            src: "/bird.png",
-            maxCount: 4,
-            speed: 100,
-            speedVariance: 0.3,
-            direction: { x: 1, y: -0.1 },
-            directionVariance: 20,
-            oscillation: { amplitude: 12, frequency: 0.6 },
-            fps: 8,
-            zIndex: 8,
-            scale: 1,
-          },
-        ]}
+        renderConfig={
+          isMobile
+            ? { dpr: [1, 1.25], antialias: false, powerPreference: "low-power" }
+            : { dpr: [1, 2], antialias: true, powerPreference: "high-performance" }
+        }
+        blockOnParticleInit={!isMobile}
+        spriteEffects={spriteEffects}
         fogEffects={[]}
-        particleEffects={[
-          // {
-          //   id: "sparkles",
-          //   mode: "twinkle",
-          //   maxCount: 40,
-          //   color: "#fff",
-          //   size: 7,
-          //   sizeVariance: 0.5,
-          //   twinkleDuration: 2,
-          //   twinkleDurationVariance: 0.6,
-          //   regionMode: "container",
-          //   zIndex: 11,
-          //   opacity: 0.9,
-          // },
-          {
-            id: "embers",
-            mode: "drift",
-            maxCount: 40,
-            color: "#fff",
-            size: 7,
-            sizeVariance: 0.4,
-            driftDirection: { x: 0.1, y: 1 },
-            driftDirectionVariance: 20,
-            driftSpeed: 25,
-            driftSpeedVariance: 0.3,
-            driftDistance: 120,
-            regionMode: "container",
-            zIndex: 11,
-            opacity: 0.8,
-          },
-          // {
-          //   id: "fireflies",
-          //   mode: "glow",
-          //   glowStyle: "soft",
-          //   glowMovement: "stationary",
-          //   maxCount: 100,
-          //   color: "#FFEB3B",
-          //   size: 10,
-          //   sizeVariance: 0.3,
-          //   glowDuration: 3,
-          //   glowDurationVariance: 0.5,
-          //   regionMode: "container",
-          //   zIndex: 11,
-          //   opacity: 0.8,
-          // },
-          // {
-          //   id: "magic-orbs",
-          //   mode: "glow",
-          //   glowStyle: "bloom",
-          //   glowMovement: "drift",
-          //   maxCount: 15,
-          //   color: "#9C27B0",
-          //   size: 100,
-          //   sizeVariance: 0.4,
-          //   glowDuration: 4,
-          //   glowDurationVariance: 0.3,
-          //   driftDirection: { x: 0, y: -1 },
-          //   driftDirectionVariance: 25,
-          //   driftSpeed: 15,
-          //   driftSpeedVariance: 0.3,
-          //   driftDistance: 150,
-          //   regionMode: "container",
-          //   zIndex: 11,
-          //   opacity: 0.9,
-          // },
-          // {
-          //   id: "pulsing-lights",
-          //   mode: "glow",
-          //   glowStyle: "pulse",
-          //   glowMovement: "stationary",
-          //   maxCount: 20,
-          //   color: "#fff",
-          //   size: 20,
-          //   sizeVariance: 0.2,
-          //   glowDuration: 2.5,
-          //   glowDurationVariance: 0.6,
-          //   regionMode: "container",
-          //   zIndex: 11,
-          //   opacity: 1,
-          // },
-          // Masked particles are now configured via `maskEffects`.
-          // {
-          //   id: "masked-embers",
-          //   mode: "drift",
-          //   maxCount: 100,
-          //   color: "#FFD700",
-          //   size: 8,
-          //   driftDirection: { x: 0, y: 1 },
-          //   driftSpeed: 25,
-          //   driftDistance: 80,
-          //   maskSrc: "/maps/demo-mask.png",
-          //   maskChannel: "b",
-          //   maskBehavior: "spawn",
-          //   zIndex: 1.1,
-          // },
-        ]}
-        shaderEffects={[
-          // {
-          //   id: "water-overlay",
-          //   preset: "waterRipple",
-          //   presetParams: { uSpeed: 1, uAmplitude: 0.1 },
-          //   zIndex: 9,
-          //   space: "viewport",
-          // },
-          {
-            id: "vignette",
-            space: "viewport",
-            fragmentShader: `
-              uniform float uTime;
-              uniform vec2 uResolution;
-              varying vec2 vUv;
-
-              void main() {
-                vec2 center = vUv - 0.5;
-                float dist = length(center);
-                float pulse = 0.85 + 0.15 * sin(uTime * 0.5);
-                float vignette = smoothstep(0.5 * pulse, 0.9, dist);
-                gl_FragColor = vec4(0.0, 0.0, 0.0, vignette * 0.4);
-              }
-            `,
-            zIndex: 10,
-          },
-        ]}
-        maskEffects={[
-          {
-            id: "terrain-effects",
-            src: "/maps/demo-mask.png",
-            pinnedTo: 'base',
-            red: {
-              type: "particles",
-              config: {
-                mode: "twinkle",
-                maxCount: 200,
-                color: "#d3ebfe",
-                size: 5,
-                twinkleDuration: 2,
-                twinkleDurationVariance: 0.8,
-              },
-            },
-            blue: {
-              type: "particles",
-              config: {
-                mode: "drift",
-                maxCount: 80,
-                color: "#FFD700",
-                size: 3,
-                sizeVariance: 0.4,
-                driftDirection: { x: 0.1, y: 1 },
-                driftDirectionVariance: 20,
-                driftSpeed: 25,
-                driftSpeedVariance: 0.3,
-                driftDistance: 120,
-              },
-            },
-            green: {
-              type: "particles",
-              config: {
-                mode: "glow",
-                glowStyle: "pulse",
-                glowMovement: "stationary",
-                maxCount: 100,
-                color: "#83ff72",
-                size: 10,
-                sizeVariance: 0.3,
-                glowDuration: 3,
-                glowDurationVariance: 0.5,
-                regionMode: "container",
-                zIndex: 11,
-                opacity: 0.8,
-              }
-            },
-            zIndex: 1.5,
-            space: "map",
-            maskBehavior: "both",
-          },
-          // {
-          //   id: "cloud-front-pinned-effects",
-          //   src: "/maps/demo-mask.png",
-          //   pinnedTo: "cloud-front",
-          //   red: {
-          //     preset: "waterRipple",
-          //     presetParams: { uSpeed: 0.8, uAmplitude: 0.015 },
-          //   },
-          //   green: {
-          //     type: "particles",
-          //     config: {
-          //       mode: "twinkle",
-          //       maxCount: 40,
-          //       color: "#9af9ff",
-          //       size: 4,
-          //       twinkleDuration: 2.5,
-          //     },
-          //   },
-          //   blue: {
-          //     preset: "glow",
-          //     presetParams: { uIntensity: 0.55, uGlowColor: [0.35, 0.9, 1.0] },
-          //   },
-          //   maskBehavior: "both",
-          // },
-        ]}
+        particleEffects={particleEffects}
+        shaderEffects={shaderEffects}
+        maskEffects={maskEffects}
         onMarkerClick={(markerId) => {
-          console.log("[demo] marker clicked:", markerId);
           setSelectedMarkerId(markerId);
         }}
         resetZoomTrigger={resetZoomTrigger}
@@ -324,12 +331,12 @@ export default function Home() {
         zoomConfig={{
           enabled: true,
           minZoom: 1,
-          maxZoom: 1.6,
-          initialZoom: 1.1,
-          animateIntroZoom: true,
+          maxZoom: isMobile ? 1.4 : 1.6,
+          initialZoom: isMobile ? 1.05 : 1.1,
+          animateIntroZoom: !isMobile,
           introZoomDelayMs: 1000,
         }}
-        parallaxConfig={{ intensity: 0.3, mode: "depth" }}
+        parallaxConfig={{ intensity: isMobile ? 0.2 : 0.3, mode: "depth" }}
       />
 
       <div

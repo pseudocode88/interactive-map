@@ -663,6 +663,18 @@ export interface LoadingStyleConfig {
   font?: string;
 }
 
+export interface RenderConfig {
+  /**
+   * Device pixel ratio used by the Three.js renderer.
+   * Use a capped tuple (e.g. [1, 1.5]) to reduce mobile GPU load.
+   */
+  dpr?: number | [number, number];
+  /** Enables/disables MSAA on the WebGL context. Default: true */
+  antialias?: boolean;
+  /** Hint to browser GPU scheduling. Default: "default" */
+  powerPreference?: "default" | "high-performance" | "low-power";
+}
+
 export interface InteractiveMapProps {
   layers: MapLayer[];
   /** ID of the layer to use as the viewport reference. If not provided, defaults to the layer with the lowest zIndex. */
@@ -694,6 +706,14 @@ export interface InteractiveMapProps {
   loadingStyle?: LoadingStyleConfig;
   /** Controls loading screen visibility. Defaults to true. */
   showLoadingScreen?: boolean;
+  /** Renderer tuning options for performance-sensitive environments (e.g. mobile). */
+  renderConfig?: RenderConfig;
+  /**
+   * When false, particle initialization does not block the loading overlay.
+   * Particles continue initializing in the background after first frame.
+   * Default: true
+   */
+  blockOnParticleInit?: boolean;
   /**
    * Increment this number to reset viewport to initial load state
    * (initialZoom and centered pan). E.g. set to Date.now() or a counter.

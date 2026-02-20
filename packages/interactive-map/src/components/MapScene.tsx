@@ -46,6 +46,7 @@ interface MapSceneProps {
   particleEffects?: ParticleEffectConfig[];
   shaderEffects?: ShaderEffectConfig[];
   maskEffects?: MaskEffectConfig[];
+  blockOnParticleInit: boolean;
   onMarkerClick?: (markerId: string) => void;
   onMarkerHoverChange?: (markerId: string | null) => void;
   focusTarget?: { x: number; y: number } | null;
@@ -78,6 +79,7 @@ export function MapScene({
   particleEffects,
   shaderEffects,
   maskEffects,
+  blockOnParticleInit,
   onMarkerClick,
   onMarkerHoverChange,
   focusTarget,
@@ -233,13 +235,19 @@ export function MapScene({
     loadedParticleIdsRef.current.clear();
     registerStage(LoadingStage.PARTICLE_INIT, "Initializing particles");
 
-    if (totalParticleCount === 0) {
+    if (!blockOnParticleInit || totalParticleCount === 0) {
       completeStage(LoadingStage.PARTICLE_INIT);
       return;
     }
 
     updateStageProgress(LoadingStage.PARTICLE_INIT, 0);
-  }, [completeStage, registerStage, totalParticleCount, updateStageProgress]);
+  }, [
+    blockOnParticleInit,
+    completeStage,
+    registerStage,
+    totalParticleCount,
+    updateStageProgress,
+  ]);
 
   useEffect(() => {
     registerStage(LoadingStage.FIRST_FRAME, "Rendering first frame");
@@ -283,6 +291,10 @@ export function MapScene({
 
   const handleParticleReady = useCallback(
     (particleId: string) => {
+      if (!blockOnParticleInit) {
+        return;
+      }
+
       if (loadedParticleIdsRef.current.has(particleId)) {
         return;
       }
@@ -295,7 +307,7 @@ export function MapScene({
         completeStage(LoadingStage.PARTICLE_INIT);
       }
     },
-    [completeStage, totalParticleCount, updateStageProgress]
+    [blockOnParticleInit, completeStage, totalParticleCount, updateStageProgress]
   );
 
   const firstFrameReportedRef = useRef(false);

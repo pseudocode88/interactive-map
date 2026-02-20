@@ -8,6 +8,7 @@ import type {
   InteractiveMapProps,
   PanConfig,
   ParallaxConfig,
+  RenderConfig,
   ZoomConfig,
 } from "../types";
 import {
@@ -48,6 +49,8 @@ function InteractiveMapContent({
   loadingMessages,
   loadingStyle,
   showLoadingScreen,
+  renderConfig,
+  blockOnParticleInit = true,
 }: InteractiveMapProps) {
   const loadingManager = useContext(LoadingManagerContext);
   const shouldShowLoadingScreen = showLoadingScreen !== false;
@@ -60,6 +63,12 @@ function InteractiveMapContent({
   const shouldRunIntroZoom =
     (zoomConfig?.animateIntroZoom ?? false) && shouldShowLoadingScreen;
   const introZoomDelayMs = Math.max(0, zoomConfig?.introZoomDelayMs ?? 0);
+
+  const resolvedRenderConfig: Required<RenderConfig> = {
+    dpr: renderConfig?.dpr ?? [1, 2],
+    antialias: renderConfig?.antialias ?? true,
+    powerPreference: renderConfig?.powerPreference ?? "default",
+  };
 
   useEffect(() => {
     if (!shouldShowLoadingScreen) {
@@ -199,6 +208,7 @@ function InteractiveMapContent({
     >
       <Canvas
         orthographic
+        dpr={resolvedRenderConfig.dpr}
         camera={{
           left: -halfWidth,
           right: halfWidth,
@@ -208,7 +218,11 @@ function InteractiveMapContent({
           far: 100,
           position: [0, 0, 10],
         }}
-        gl={{ antialias: true, toneMapping: NoToneMapping }}
+        gl={{
+          antialias: resolvedRenderConfig.antialias,
+          powerPreference: resolvedRenderConfig.powerPreference,
+          toneMapping: NoToneMapping,
+        }}
         style={{ width: "100%", height: "100%" }}
       >
         <LoadingManagerBridge manager={loadingManager}>
@@ -231,6 +245,7 @@ function InteractiveMapContent({
               particleEffects={particleEffects}
               shaderEffects={shaderEffects}
               maskEffects={maskEffects}
+              blockOnParticleInit={blockOnParticleInit}
               onMarkerClick={(markerId) => {
                 const marker = markersById.get(markerId);
                 if (!marker) {
