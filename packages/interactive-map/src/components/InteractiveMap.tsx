@@ -40,6 +40,7 @@ function InteractiveMapContent({
   parallaxConfig,
   markers,
   spriteEffects,
+  pinnedSprites,
   fogEffects,
   particleEffects,
   shaderEffects,
@@ -241,6 +242,7 @@ function InteractiveMapContent({
               viewportRef={viewportRef}
               markers={markers}
               spriteEffects={spriteEffects}
+              pinnedSprites={pinnedSprites}
               fogEffects={fogEffects}
               particleEffects={particleEffects}
               shaderEffects={shaderEffects}

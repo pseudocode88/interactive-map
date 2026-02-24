@@ -25,6 +25,7 @@ export interface BuiltMapConfig {
   parallaxConfig: ParallaxConfig;
   layers: NonNullable<InteractiveMapProps["layers"]>;
   spriteEffects: NonNullable<InteractiveMapProps["spriteEffects"]>;
+  pinnedSprites: NonNullable<InteractiveMapProps["pinnedSprites"]>;
   fogEffects: NonNullable<InteractiveMapProps["fogEffects"]>;
   particleEffects: NonNullable<InteractiveMapProps["particleEffects"]>;
   shaderEffects: NonNullable<InteractiveMapProps["shaderEffects"]>;
