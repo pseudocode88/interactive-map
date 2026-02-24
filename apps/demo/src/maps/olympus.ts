@@ -146,11 +146,11 @@ function buildPinnedSprites(
     {
       id: "flag",
       src: "/flag.png",
-      x: isMobile ? 900 * MOBILE_ASSET_SCALE : 900,
-      y: isMobile ? 1280 * MOBILE_ASSET_SCALE : 1280,
-      fps: 8,
+      x: isMobile ? 2033 * MOBILE_ASSET_SCALE : 2033,
+      y: isMobile ? 478 * MOBILE_ASSET_SCALE : 478,
+      fps: 4,
       zIndex: 2,
-      scale: 0.5625 * mobileScale,
+      scale: 0.08 * mobileScale,
       opacity: 1,
     },
   ];
