@@ -46,6 +46,7 @@ export type {
   MapLayer,
   MapMarker,
   ParticleEffectConfig,
+  PinnedSpriteConfig,
   PinnedEffects,
   PinnedParticleEffectConfig,
   PinnedShaderEffectConfig,

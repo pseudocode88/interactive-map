@@ -267,6 +267,30 @@ export interface SpriteEffectConfig {
   opacity?: number;
 }
 
+export interface PinnedSpriteConfig {
+  /** Unique ID for this pinned sprite */
+  id: string;
+  /** URL to the sprite sheet PNG. Frames are auto-detected as a grid of square frames. */
+  src: string;
+  /** X position in base image pixel coordinates (0 = left edge) */
+  x: number;
+  /** Y position in base image pixel coordinates (0 = top edge) */
+  y: number;
+  /** Frames per second for sprite sheet animation. Default: 8 */
+  fps?: number;
+  /** zIndex for depth ordering (same system as MapLayer). Default: 10 */
+  zIndex?: number;
+  /**
+   * Scale multiplier applied to the frame pixel size in world space.
+   * displaySize = framePixelSize * scale.
+   * Example: frame is 128 px, flag region is 72 px -> scale ~= 0.5625.
+   * Default: 1
+   */
+  scale?: number;
+  /** Opacity of the sprite (0-1). Default: 1 */
+  opacity?: number;
+}
+
 export interface FogOpacityPulse {
   /** Minimum opacity during the pulse cycle. Default: 0.3 */
   minOpacity?: number;
@@ -690,6 +714,8 @@ export interface InteractiveMapProps {
   markers?: MapMarker[];
   /** Array of sprite effect configurations (birds, butterflies, etc.) */
   spriteEffects?: SpriteEffectConfig[];
+  /** Array of pinned sprite configurations (e.g. fixed-position animated flags). */
+  pinnedSprites?: PinnedSpriteConfig[];
   /** Array of fog effect configurations */
   fogEffects?: FogEffectConfig[];
   /** Array of particle effect configurations (sparkles, embers, fairy dust, etc.) */

@@ -3,6 +3,7 @@ import type {
   MapMarker,
   MaskEffectConfig,
   ParticleEffectConfig,
+  PinnedSpriteConfig,
   ShaderEffectConfig,
   SpriteEffectConfig,
 } from "@interactive-map/core";
@@ -127,6 +128,30 @@ function buildSpriteEffects(isMobile: boolean, effectsEnabled: boolean): SpriteE
       fps: 8,
       zIndex: 8,
       scale: isMobile ? 0.9 : 1,
+    },
+  ];
+}
+
+function buildPinnedSprites(
+  isMobile: boolean,
+  effectsEnabled: boolean
+): PinnedSpriteConfig[] {
+  if (!effectsEnabled) {
+    return [];
+  }
+
+  const mobileScale = isMobile ? 0.5 : 1;
+
+  return [
+    {
+      id: "flag",
+      src: "/flag.png",
+      x: isMobile ? 2033 * MOBILE_ASSET_SCALE : 2033,
+      y: isMobile ? 478 * MOBILE_ASSET_SCALE : 478,
+      fps: 4,
+      zIndex: 2,
+      scale: 0.08 * mobileScale,
+      opacity: 1,
     },
   ];
 }
@@ -270,6 +295,7 @@ function buildOlympusConfig(isMobile: boolean, effectsEnabled: boolean): BuiltMa
     parallaxConfig: { intensity: isMobile ? 0.2 : 0.3, mode: "depth" },
     layers: buildLayers(isMobile),
     spriteEffects: buildSpriteEffects(isMobile, effectsEnabled),
+    pinnedSprites: buildPinnedSprites(isMobile, effectsEnabled),
     fogEffects: [],
     particleEffects: buildParticleEffects(isMobile, effectsEnabled),
     shaderEffects: buildShaderEffects(isMobile, effectsEnabled),

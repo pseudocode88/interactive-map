@@ -73,6 +73,7 @@ export default function Home() {
         renderConfig={mapConfig.renderConfig}
         blockOnParticleInit={mapConfig.blockOnParticleInit}
         spriteEffects={mapConfig.spriteEffects}
+        pinnedSprites={mapConfig.pinnedSprites}
         fogEffects={mapConfig.fogEffects}
         particleEffects={mapConfig.particleEffects}
         shaderEffects={mapConfig.shaderEffects}

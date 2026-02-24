@@ -11,6 +11,7 @@ import type {
   MapMarker,
   MaskEffectConfig,
   ParticleEffectConfig,
+  PinnedSpriteConfig,
   PinnedEffects,
   PanConfig,
   ParallaxConfig,
@@ -25,6 +26,7 @@ import { FogEffect } from "./FogEffect";
 import { MapLayerMesh } from "./MapLayerMesh";
 import { MarkerDot } from "./MarkerDot";
 import { ParticleEffect } from "./ParticleEffect";
+import { PinnedSprite } from "./PinnedSprite";
 import { ShaderEffect } from "./ShaderEffect";
 import { SpriteEffect } from "./SpriteEffect";
 
@@ -42,6 +44,7 @@ interface MapSceneProps {
   viewportRef: RefObject<{ x: number; y: number; zoom: number }>;
   markers?: MapMarker[];
   spriteEffects?: SpriteEffectConfig[];
+  pinnedSprites?: PinnedSpriteConfig[];
   fogEffects?: FogEffectConfig[];
   particleEffects?: ParticleEffectConfig[];
   shaderEffects?: ShaderEffectConfig[];
@@ -75,6 +78,7 @@ export function MapScene({
   viewportRef,
   markers,
   spriteEffects,
+  pinnedSprites,
   fogEffects,
   particleEffects,
   shaderEffects,
@@ -520,6 +524,14 @@ export function MapScene({
           />
         );
       })}
+      {(pinnedSprites ?? []).map((config) => (
+        <PinnedSprite
+          key={config.id}
+          config={config}
+          baseWidth={baseWidth}
+          baseHeight={baseHeight}
+        />
+      ))}
       {(markers ?? []).map((marker) => {
         const worldX = marker.x - baseWidth / 2;
         const worldY = baseHeight / 2 - marker.y;
