@@ -51,6 +51,8 @@ function InteractiveMapContent({
   loadingStyle,
   showLoadingScreen,
   renderConfig,
+  mobileMarkerScale,
+  mobileBreakpoint,
   blockOnParticleInit = true,
 }: InteractiveMapProps) {
   const loadingManager = useContext(LoadingManagerContext);
@@ -123,6 +125,12 @@ function InteractiveMapContent({
 
   const baseSize = useBaseImageSize(baseLayer?.src ?? "");
   const containerSize = useContainerSize(containerRef);
+  const effectiveMarkerScale =
+    mobileMarkerScale !== undefined &&
+    containerSize !== null &&
+    containerSize.width <= (mobileBreakpoint ?? 768)
+      ? mobileMarkerScale
+      : 1;
   const markersById = useMemo(
     () => new Map((markers ?? []).map((marker) => [marker.id, marker])),
     [markers]
@@ -241,6 +249,7 @@ function InteractiveMapContent({
               parallaxConfig={resolvedParallaxConfig}
               viewportRef={viewportRef}
               markers={markers}
+              markerScale={effectiveMarkerScale}
               spriteEffects={spriteEffects}
               pinnedSprites={pinnedSprites}
               fogEffects={fogEffects}

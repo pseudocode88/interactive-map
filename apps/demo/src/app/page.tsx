@@ -6,6 +6,8 @@ import { mapRegistry } from "../maps";
 
 const MOBILE_MEDIA_QUERY = "(max-width: 900px), (pointer: coarse)";
 const DEFAULT_MAP_ID = "olympus";
+const DEMO_MOBILE_MARKER_SCALE = 0.7;
+const DEMO_MOBILE_BREAKPOINT = 768;
 
 function buildMarkerMap(items: MapMarker[]) {
   return new Map(items.map((marker) => [marker.id, marker]));
@@ -86,6 +88,8 @@ export default function Home() {
         panConfig={mapConfig.panConfig}
         zoomConfig={mapConfig.zoomConfig}
         parallaxConfig={mapConfig.parallaxConfig}
+        mobileMarkerScale={DEMO_MOBILE_MARKER_SCALE}
+        mobileBreakpoint={DEMO_MOBILE_BREAKPOINT}
       />
 
       <div
@@ -108,6 +112,9 @@ export default function Home() {
       >
         <span>Map: {activeMap.label}</span>
         <span>Selected Marker: {selectedLabel}</span>
+        <span style={{ opacity: 0.85 }}>
+          Marker scale {"<="} {DEMO_MOBILE_BREAKPOINT}px: {DEMO_MOBILE_MARKER_SCALE}
+        </span>
         <span style={{ opacity: 0.85 }}>Hover marker to see tooltip</span>
         <span style={{ opacity: 0.85 }}>Click marker to focus</span>
         <button
