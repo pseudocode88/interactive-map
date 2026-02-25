@@ -735,6 +735,17 @@ export interface InteractiveMapProps {
   /** Renderer tuning options for performance-sensitive environments (e.g. mobile). */
   renderConfig?: RenderConfig;
   /**
+   * Scale factor (0-1) applied to markers when the map container width
+   * is at or below `mobileBreakpoint`. For example, 0.6 shrinks markers
+   * to 60% of their normal size. Default: 1 (no change).
+   */
+  mobileMarkerScale?: number;
+  /**
+   * Container width (px) below which `mobileMarkerScale` is applied.
+   * Default: 768.
+   */
+  mobileBreakpoint?: number;
+  /**
    * When false, particle initialization does not block the loading overlay.
    * Particles continue initializing in the background after first frame.
    * Default: true

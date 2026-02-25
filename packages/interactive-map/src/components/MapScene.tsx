@@ -43,6 +43,7 @@ interface MapSceneProps {
   parallaxConfig?: Required<ParallaxConfig>;
   viewportRef: RefObject<{ x: number; y: number; zoom: number }>;
   markers?: MapMarker[];
+  markerScale?: number;
   spriteEffects?: SpriteEffectConfig[];
   pinnedSprites?: PinnedSpriteConfig[];
   fogEffects?: FogEffectConfig[];
@@ -77,6 +78,7 @@ export function MapScene({
   parallaxConfig,
   viewportRef,
   markers,
+  markerScale = 1,
   spriteEffects,
   pinnedSprites,
   fogEffects,
@@ -545,6 +547,7 @@ export function MapScene({
             zPosition={markerZPosition}
             onHoverChange={stableHoverChange}
             onClick={() => onMarkerClick?.(marker.id)}
+            markerScale={markerScale}
           />
         );
       })}

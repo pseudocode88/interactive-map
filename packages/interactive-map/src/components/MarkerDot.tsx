@@ -14,6 +14,7 @@ interface MarkerDotProps {
   zPosition: number;
   onHoverChange: (markerId: string | null) => void;
   onClick: () => void;
+  markerScale?: number;
 }
 
 const MARKER_RADIUS = 20;
@@ -30,6 +31,7 @@ export function MarkerDot({
   zPosition,
   onHoverChange,
   onClick,
+  markerScale = 1,
 }: MarkerDotProps) {
   const dotRef = useRef<Mesh>(null);
   const haloRef = useRef<Mesh>(null);
@@ -59,18 +61,19 @@ export function MarkerDot({
       DOT_PULSE_MIN_SCALE +
       (DOT_PULSE_MAX_SCALE - DOT_PULSE_MIN_SCALE) * pulseProgress;
     const hoverScale = isHoveredRef.current ? 1.3 : 1;
-    const targetScale = (hoverScale * dotPulseScale) / zoom;
+    const targetScale = (hoverScale * dotPulseScale * markerScale) / zoom;
     currentScale.current += (targetScale - currentScale.current) * 0.2;
     dot.scale.setScalar(currentScale.current);
 
-    const haloScale = (HALO_BASE_SCALE * (isHoveredRef.current ? 1.12 : 1)) / zoom;
+    const haloScale =
+      (HALO_BASE_SCALE * (isHoveredRef.current ? 1.12 : 1) * markerScale) / zoom;
     halo.scale.setScalar(haloScale);
     haloMaterial.opacity = isHoveredRef.current
       ? HALO_BASE_OPACITY + 0.14
       : HALO_BASE_OPACITY;
 
     const pulseElapsed = (state.clock.getElapsedTime() % 1.5) / 1.5;
-    const pulseScale = (1.25 + pulseElapsed * 1.35) / zoom;
+    const pulseScale = ((1.25 + pulseElapsed * 1.35) * markerScale) / zoom;
     const pulseOpacity = 0.9 * (1 - pulseElapsed);
     pulse.scale.setScalar(pulseScale);
     pulseMaterial.opacity = pulseOpacity;
