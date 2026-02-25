@@ -87,6 +87,12 @@ Controls loading overlay visibility. Default: `true`.
 ### `renderConfig?: RenderConfig`
 Renderer performance tuning options.
 
+### `mobileMarkerScale?: number`
+Scale factor (0-1) applied to markers when container width is at or below `mobileBreakpoint`. Default: `1`.
+
+### `mobileBreakpoint?: number`
+Container width threshold (px) where `mobileMarkerScale` is applied. Default: `768`.
+
 ### `blockOnParticleInit?: boolean`
 When `false`, particle initialization continues after first reveal. Default: `true`.
 
@@ -102,6 +108,8 @@ Small snippet:
   zoomConfig={{ minZoom: 1, maxZoom: 2.2 }}
   parallaxConfig={{ intensity: 0.3 }}
   renderConfig={{ dpr: [1, 1.5], antialias: false }}
+  mobileMarkerScale={0.7}
+  mobileBreakpoint={768}
 />
 ```
 
