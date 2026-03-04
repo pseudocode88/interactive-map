@@ -74,11 +74,12 @@ function computeSnapshot(stages: Map<string, LoadingStageRecord>): LoadingManage
   }
 
   const overallProgress = totalWeight === 0 ? 0 : (weightedProgress / totalWeight) * 100;
+  const hasRegisteredFirstFrame = stages.has(LoadingStage.FIRST_FRAME);
 
   return {
     stages: serialized,
     overallProgress,
-    isComplete: overallProgress >= 100,
+    isComplete: hasRegisteredFirstFrame && overallProgress >= 100,
     currentStage: firstIncompleteLabel || fallbackLabel,
   };
 }

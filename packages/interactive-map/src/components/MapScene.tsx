@@ -214,46 +214,31 @@ export function MapScene({
   const loadedParticleIdsRef = useRef(new Set<string>());
 
   useEffect(() => {
-    loadedLayerIdsRef.current.clear();
     registerStage(LoadingStage.LAYER_TEXTURES, "Loading map layers");
 
     if (totalLayerCount === 0) {
       completeStage(LoadingStage.LAYER_TEXTURES);
       return;
     }
-
-    updateStageProgress(LoadingStage.LAYER_TEXTURES, 0);
-  }, [completeStage, registerStage, totalLayerCount, updateStageProgress]);
+  }, [completeStage, registerStage, totalLayerCount]);
 
   useEffect(() => {
-    loadedMaskOperationIdsRef.current.clear();
     registerStage(LoadingStage.MASK_TEXTURES, "Applying masks");
 
     if (totalMaskOperationCount === 0) {
       completeStage(LoadingStage.MASK_TEXTURES);
       return;
     }
-
-    updateStageProgress(LoadingStage.MASK_TEXTURES, 0);
-  }, [completeStage, registerStage, totalMaskOperationCount, updateStageProgress]);
+  }, [completeStage, registerStage, totalMaskOperationCount]);
 
   useEffect(() => {
-    loadedParticleIdsRef.current.clear();
     registerStage(LoadingStage.PARTICLE_INIT, "Initializing particles");
 
     if (!blockOnParticleInit || totalParticleCount === 0) {
       completeStage(LoadingStage.PARTICLE_INIT);
       return;
     }
-
-    updateStageProgress(LoadingStage.PARTICLE_INIT, 0);
-  }, [
-    blockOnParticleInit,
-    completeStage,
-    registerStage,
-    totalParticleCount,
-    updateStageProgress,
-  ]);
+  }, [blockOnParticleInit, completeStage, registerStage, totalParticleCount]);
 
   useEffect(() => {
     registerStage(LoadingStage.FIRST_FRAME, "Rendering first frame");
@@ -317,8 +302,14 @@ export function MapScene({
   );
 
   const firstFrameReportedRef = useRef(false);
+  const frameCountRef = useRef(0);
   useFrame(() => {
     if (firstFrameReportedRef.current) {
+      return;
+    }
+
+    frameCountRef.current += 1;
+    if (frameCountRef.current < 2) {
       return;
     }
 
