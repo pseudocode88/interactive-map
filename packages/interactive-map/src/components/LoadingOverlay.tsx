@@ -71,6 +71,7 @@ export function LoadingOverlay({ messages, loadingStyle, onFadeComplete }: Loadi
 
   useEffect(() => {
     if (!state.isComplete) {
+      setIsFadingOut(false);
       return;
     }
 

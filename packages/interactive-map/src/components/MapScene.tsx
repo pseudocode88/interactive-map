@@ -317,8 +317,14 @@ export function MapScene({
   );
 
   const firstFrameReportedRef = useRef(false);
+  const frameCountRef = useRef(0);
   useFrame(() => {
     if (firstFrameReportedRef.current) {
+      return;
+    }
+
+    frameCountRef.current += 1;
+    if (frameCountRef.current < 2) {
       return;
     }
 
